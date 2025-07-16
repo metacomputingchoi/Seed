@@ -1,3 +1,4 @@
+// core/DataConfig.kt
 package com.metacomputing.seed.core
 
 data class DataConfig(

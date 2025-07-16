@@ -1,3 +1,4 @@
+// domain/model/name/Name.kt
 package com.metacomputing.seed.domain.model.name
 
 class Name private constructor(

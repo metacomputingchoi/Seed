@@ -1,3 +1,4 @@
+// core/ProfileContext.kt
 package com.metacomputing.seed.core
 
 import com.metacomputing.seed.domain.model.profile.Profile

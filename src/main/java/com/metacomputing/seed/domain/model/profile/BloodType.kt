@@ -1,3 +1,4 @@
+// domain/model/profile/BloodType.kt
 package com.metacomputing.seed.domain.model.profile
 
 enum class BloodType(val display: String) {

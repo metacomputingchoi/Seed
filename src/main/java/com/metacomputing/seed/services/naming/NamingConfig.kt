@@ -1,3 +1,4 @@
+// services/naming/NamingConfig.kt
 package com.metacomputing.seed.services.naming
 
 data class NamingConfig(

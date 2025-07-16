@@ -1,3 +1,4 @@
+// domain/model/profile/Profile.kt
 package com.metacomputing.seed.domain.model.profile
 
 import com.metacomputing.mcalendar.CalSDK
