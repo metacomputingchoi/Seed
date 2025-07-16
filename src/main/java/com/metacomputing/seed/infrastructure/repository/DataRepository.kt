@@ -1,8 +1,8 @@
 // infrastructure/repository/DataRepository.kt
 package com.metacomputing.seed.infrastructure.repository
 
-import com.metacomputing.seed.old.domain.exception.NamingException
-import com.metacomputing.seed.old.util.parsing.JsonParser
+import com.metacomputing.seed.domain.exception.NamingException
+import com.metacomputing.seed.util.parsing.JsonParser
 
 class DataRepository {
     lateinit var nameCharTripleDict: Map<String, Map<String, Any>>

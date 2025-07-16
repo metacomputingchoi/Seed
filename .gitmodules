@@ -1,3 +1,6 @@
 [submodule "seed"]
 	path = seed
 	url = https://github.com/metacomputing-dev/Seed
+[submodule "MCalendar"]
+	path = MCalendar
+	url = https://github.com/metacomputing-dev/MCalendar.git
