@@ -21,11 +21,9 @@ class SageokSuriOhengAnalyzer {
         val hyeongOheng = OhengUtil.getOhengByStroke(sageokSuri.hyeongGyeok)
         ohengCount["${hyeongOheng}(${getHanja(hyeongOheng)})"] = ohengCount["${hyeongOheng}(${getHanja(hyeongOheng)})"]!! + 1
 
-        // 이격의 오행 (있을 경우)
-        sageokSuri.iGyeok?.let {
-            val iOheng = OhengUtil.getOhengByStroke(it)
-            ohengCount["${iOheng}(${getHanja(iOheng)})"] = ohengCount["${iOheng}(${getHanja(iOheng)})"]!! + 1
-        }
+        // 이격의 오행
+        val iOheng = OhengUtil.getOhengByStroke(sageokSuri.iGyeok!!)
+        ohengCount["${iOheng}(${getHanja(iOheng)})"] = ohengCount["${iOheng}(${getHanja(iOheng)})"]!! + 1
 
         // 정격의 오행
         val jeongOheng = OhengUtil.getOhengByStroke(sageokSuri.jeongGyeok)

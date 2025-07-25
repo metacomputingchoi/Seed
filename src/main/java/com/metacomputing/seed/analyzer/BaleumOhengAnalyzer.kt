@@ -1,8 +1,11 @@
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
+import com.metacomputing.seed.database.HanjaDatabase
 
 class BaleumOhengAnalyzer {
+    private val hanjaDB = HanjaDatabase()
+
     fun analyze(nameInput: NameInput): BaleumOheng {
         val ohengCount = mutableMapOf(
             "목(木)" to 0,
@@ -12,57 +15,38 @@ class BaleumOhengAnalyzer {
             "수(水)" to 0
         )
 
-        // 전체 이름의 발음 분석
-        val fullName = nameInput.surname + nameInput.givenName
-        fullName.forEach { char ->
-            when {
-                isWoodSound(char) -> ohengCount["목(木)"] = ohengCount["목(木)"]!! + 1
-                isFireSound(char) -> ohengCount["화(火)"] = ohengCount["화(火)"]!! + 1
-                isEarthSound(char) -> ohengCount["토(土)"] = ohengCount["토(土)"]!! + 1
-                isMetalSound(char) -> ohengCount["금(金)"] = ohengCount["금(金)"]!! + 1
-                isWaterSound(char) -> ohengCount["수(水)"] = ohengCount["수(水)"]!! + 1
+        // 성씨 발음 오행 분석
+        val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
+        surnamePairs.forEach { pair ->
+            val parts = pair.split("/")
+            if (parts.size == 2) {
+                val hanjaInfo = hanjaDB.getHanjaInfo(parts[0], parts[1], true)
+                val oheng = hanjaInfo?.integratedInfo?.soundOheng ?: "土"
+                val key = convertOhengKey(oheng)
+                ohengCount[key] = ohengCount[key]!! + 1
             }
+        }
+
+        // 이름 발음 오행 분석
+        nameInput.givenName.forEachIndexed { index, char ->
+            val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
+            val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
+            val oheng = hanjaInfo?.integratedInfo?.soundOheng ?: "土"
+            val key = convertOhengKey(oheng)
+            ohengCount[key] = ohengCount[key]!! + 1
         }
 
         return BaleumOheng(ohengDistribution = ohengCount)
     }
 
-    // 훈민정음 원리에 따른 자음 분류
-    private fun isWoodSound(char: Char): Boolean {
-        val consonant = getInitialConsonant(char)
-        return consonant in listOf('ㄱ', 'ㅋ')
-    }
-
-    private fun isFireSound(char: Char): Boolean {
-        val consonant = getInitialConsonant(char)
-        return consonant in listOf('ㄴ', 'ㄷ', 'ㄹ', 'ㅌ')
-    }
-
-    private fun isEarthSound(char: Char): Boolean {
-        val consonant = getInitialConsonant(char)
-        return consonant in listOf('ㅇ', 'ㅎ')
-    }
-
-    private fun isMetalSound(char: Char): Boolean {
-        val consonant = getInitialConsonant(char)
-        return consonant in listOf('ㅅ', 'ㅈ', 'ㅊ')
-    }
-
-    private fun isWaterSound(char: Char): Boolean {
-        val consonant = getInitialConsonant(char)
-        return consonant in listOf('ㅁ', 'ㅂ', 'ㅍ')
-    }
-
-    private fun getInitialConsonant(char: Char): Char {
-        val code = char.code - 0xAC00
-        if (code < 0 || code > 11171) return ' '
-
-        val initialIndex = code / (21 * 28)
-        val initials = arrayOf(
-            'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 
-            'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'
-        )
-
-        return if (initialIndex in initials.indices) initials[initialIndex] else ' '
+    private fun convertOhengKey(oheng: String): String {
+        return when(oheng) {
+            "木" -> "목(木)"
+            "火" -> "화(火)"
+            "土" -> "토(土)"
+            "金" -> "금(金)"
+            "水" -> "수(水)"
+            else -> "토(土)"
+        }
     }
 }

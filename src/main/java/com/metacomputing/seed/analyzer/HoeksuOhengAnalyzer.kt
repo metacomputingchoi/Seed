@@ -2,7 +2,6 @@ package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
 import com.metacomputing.seed.database.HanjaDatabase
-import com.metacomputing.seed.util.OhengUtil
 
 class HoeksuOhengAnalyzer {
     private val hanjaDB = HanjaDatabase()
@@ -21,31 +20,33 @@ class HoeksuOhengAnalyzer {
         surnamePairs.forEach { pair ->
             val parts = pair.split("/")
             if (parts.size == 2) {
-                val strokes = hanjaDB.getHanjaStrokes(parts[0], parts[1], true)
-                val oheng = OhengUtil.getOhengByStroke(strokes)
-                ohengCount["${oheng}(${getHanja(oheng)})"] = ohengCount["${oheng}(${getHanja(oheng)})"]!! + 1
+                val hanjaInfo = hanjaDB.getHanjaInfo(parts[0], parts[1], true)
+                val oheng = hanjaInfo?.integratedInfo?.resourceOheng ?: "土"
+                val key = convertOhengKey(oheng)
+                ohengCount[key] = ohengCount[key]!! + 1
             }
         }
 
         // 이름 한자 분석
         nameInput.givenName.forEachIndexed { index, char ->
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
-            val strokes = hanjaDB.getHanjaStrokes(char.toString(), hanjaChar, false)
-            val oheng = OhengUtil.getOhengByStroke(strokes)
-            ohengCount["${oheng}(${getHanja(oheng)})"] = ohengCount["${oheng}(${getHanja(oheng)})"]!! + 1
+            val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
+            val oheng = hanjaInfo?.integratedInfo?.resourceOheng ?: "土"
+            val key = convertOhengKey(oheng)
+            ohengCount[key] = ohengCount[key]!! + 1
         }
 
         return HoeksuOheng(ohengDistribution = ohengCount)
     }
 
-    private fun getHanja(oheng: String): String {
+    private fun convertOhengKey(oheng: String): String {
         return when(oheng) {
-            "목" -> "木"
-            "화" -> "火"
-            "토" -> "土"
-            "금" -> "金"
-            "수" -> "水"
-            else -> ""
+            "木" -> "목(木)"
+            "火" -> "화(火)"
+            "土" -> "토(土)"
+            "金" -> "금(金)"
+            "水" -> "수(水)"
+            else -> "토(土)"
         }
     }
 }

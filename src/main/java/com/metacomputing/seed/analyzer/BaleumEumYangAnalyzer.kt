@@ -1,47 +1,37 @@
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
+import com.metacomputing.seed.database.HanjaDatabase
 
 class BaleumEumYangAnalyzer {
+    private val hanjaDB = HanjaDatabase()
+
     fun analyze(nameInput: NameInput): BaleumEumYang {
         var eumCount = 0
         var yangCount = 0
 
-        // 전체 이름의 모음 음양 분석
-        val fullName = nameInput.surname + nameInput.givenName
-        fullName.forEach { char ->
-            when (getVowelType(char)) {
-                VowelType.YANG -> yangCount++
-                VowelType.EUM -> eumCount++
-                VowelType.NEUTRAL -> {} // 중성은 카운트하지 않음
+        // 성씨 발음 음양 분석
+        val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
+        surnamePairs.forEach { pair ->
+            val parts = pair.split("/")
+            if (parts.size == 2) {
+                val hanjaInfo = hanjaDB.getHanjaInfo(parts[0], parts[1], true)
+                val eumyang = hanjaInfo?.integratedInfo?.soundEumyang ?: 0
+                if (eumyang == 0) eumCount++ else yangCount++
             }
+        }
+
+        // 이름 발음 음양 분석
+        nameInput.givenName.forEachIndexed { index, char ->
+            val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
+            val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
+            val eumyang = hanjaInfo?.integratedInfo?.soundEumyang ?: 0
+            if (eumyang == 0) eumCount++ else yangCount++
         }
 
         return BaleumEumYang(
             eumCount = eumCount,
             yangCount = yangCount
         )
-    }
-
-    private enum class VowelType {
-        YANG, EUM, NEUTRAL
-    }
-
-    private fun getVowelType(char: Char): VowelType {
-        val code = char.code - 0xAC00
-        if (code < 0 || code > 11171) return VowelType.NEUTRAL
-
-        val vowelIndex = (code % (21 * 28)) / 28
-
-        // 양성 모음: ㅏ, ㅑ, ㅗ, ㅛ
-        val yangVowels = setOf(0, 2, 8, 12)
-        // 음성 모음: ㅓ, ㅕ, ㅜ, ㅠ, ㅡ, ㅣ
-        val eumVowels = setOf(4, 6, 13, 17, 18, 20)
-
-        return when {
-            vowelIndex in yangVowels -> VowelType.YANG
-            vowelIndex in eumVowels -> VowelType.EUM
-            else -> VowelType.NEUTRAL
-        }
     }
 }

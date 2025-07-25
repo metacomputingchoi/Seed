@@ -5,6 +5,7 @@ import com.metacomputing.seed.analyzer.NameAnalyzer
 import com.metacomputing.seed.model.NameInput
 import com.metacomputing.seed.statistics.NameStatisticsLoader
 import com.metacomputing.seed.statistics.NameStatisticsAnalyzer
+import com.metacomputing.seed.database.HanjaDatabase
 
 fun main() {
     // 사주 정보 가져오기
@@ -37,6 +38,36 @@ fun main() {
         timezoneOffset = -540
     )
 
+    // 한자 정보 출력
+    println("=== 한자 정보 ===")
+    val hanjaDB = HanjaDatabase()
+
+    // 성씨 한자 정보
+    val surnameInfo = hanjaDB.getHanjaInfo(nameInput.surname, nameInput.surnameHanja, true)
+    if (surnameInfo != null) {
+        println("성씨: ${nameInput.surname}(${nameInput.surnameHanja})")
+        println("  원획수: ${surnameInfo.integratedInfo.originalStrokes}")
+        println("  발음오행: ${surnameInfo.integratedInfo.soundOheng}")
+        println("  획수오행: ${surnameInfo.integratedInfo.resourceOheng}")
+        println("  발음음양: ${if (surnameInfo.integratedInfo.soundEumyang == 0) "음(陰)" else "양(陽)"}")
+        println("  획수음양: ${if (surnameInfo.integratedInfo.strokeEumyang == 0) "음(陰)" else "양(陽)"}")
+    }
+
+    // 이름 한자 정보
+    nameInput.givenName.forEachIndexed { index, char ->
+        val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
+        val nameInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
+        if (nameInfo != null) {
+            println("이름: $char($hanjaChar)")
+            println("  원획수: ${nameInfo.integratedInfo.originalStrokes}")
+            println("  발음오행: ${nameInfo.integratedInfo.soundOheng}")
+            println("  획수오행: ${nameInfo.integratedInfo.resourceOheng}")
+            println("  발음음양: ${if (nameInfo.integratedInfo.soundEumyang == 0) "음(陰)" else "양(陽)"}")
+            println("  획수음양: ${if (nameInfo.integratedInfo.strokeEumyang == 0) "음(陰)" else "양(陽)"}")
+        }
+    }
+    println()
+
     // 이름 통계 정보 로드
     val statsLoader = NameStatisticsLoader()
     val nameStats = statsLoader.loadStatistics()
@@ -66,13 +97,6 @@ fun main() {
         println("  남자: ${genderDist.malePercentage}%")
         println("  여자: ${genderDist.femalePercentage}%")
         println("  성별 특성: ${genderDist.genderCharacteristic}")
-
-        // 출생아 수 추이
-        val birthTrend = statsAnalyzer.analyzeBirthTrend(givenNameStats)
-        println("출생아 수 추이:")
-        println("  총 출생아 수: ${birthTrend.totalBirths}명")
-        println("  평균 연간 출생아 수: ${birthTrend.averagePerYear}명")
-        println("  추세: ${birthTrend.trend}")
     } else {
         println("'${nameInput.givenName}'에 대한 통계 정보가 없습니다.")
     }
@@ -93,9 +117,7 @@ fun main() {
     println("[원형이정 사격수리]")
     println("원격(元格): ${evaluation.sageokSuri.wonGyeok}획 (${evaluation.sageokSuri.wonGyeokFortune})")
     println("형격(亨格): ${evaluation.sageokSuri.hyeongGyeok}획 (${evaluation.sageokSuri.hyeongGyeokFortune})")
-    evaluation.sageokSuri.iGyeok?.let {
-        println("이격(利格): ${it}획 (${evaluation.sageokSuri.iGyeokFortune})")
-    }
+    println("이격(利格): ${evaluation.sageokSuri.iGyeok}획 (${evaluation.sageokSuri.iGyeokFortune})")
     println("정격(貞格): ${evaluation.sageokSuri.jeongGyeok}획 (${evaluation.sageokSuri.jeongGyeokFortune})")
     println()
 
@@ -109,7 +131,7 @@ fun main() {
     evaluation.sajuOheng.ohengDistribution.forEach { (element, count) ->
         println("  $element: $count 개")
     }
-    println("획수 오행:")
+    println("획수 오행 (자원오행):")
     evaluation.hoeksuOheng.ohengDistribution.forEach { (element, count) ->
         println("  $element: $count 개")
     }
