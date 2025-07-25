@@ -1,8 +1,10 @@
 package com.metacomputing.seed.analyzer
 
+import com.metacomputing.mcalendar.TimePointResult
 import com.metacomputing.seed.model.*
 
 class NameAnalyzer {
+    private val sajuAnalyzer = SajuAnalyzer()
     private val sageokSuriAnalyzer = SageokSuriAnalyzer()
     private val sageokSuriOhengAnalyzer = SageokSuriOhengAnalyzer()
     private val sageokSuriEumYangAnalyzer = SageokSuriEumYangAnalyzer()
@@ -13,9 +15,9 @@ class NameAnalyzer {
     private val baleumOhengAnalyzer = BaleumOhengAnalyzer()
     private val baleumEumYangAnalyzer = BaleumEumYangAnalyzer()
 
-    fun analyze(nameInput: NameInput, timePointResult: Any): NameEvaluation {
+    fun analyze(nameInput: NameInput, timePointResult: TimePointResult): NameEvaluation {
         // 사주 정보 추출
-        val sajuInfo = extractSajuInfo(timePointResult)
+        val sajuInfo = sajuAnalyzer.extractSajuInfo(timePointResult)
 
         // 각 분석 수행
         val sageokSuri = sageokSuriAnalyzer.analyze(nameInput)
@@ -46,17 +48,6 @@ class NameAnalyzer {
             hoeksuEumYang = hoeksuEumYang,
             baleumOheng = baleumOheng,
             baleumEumYang = baleumEumYang
-        )
-    }
-
-    private fun extractSajuInfo(timePointResult: Any): SajuInfo {
-        // TODO: 실제 TimePointResult에서 사주 정보 추출
-        // 임시 mock 데이터
-        return SajuInfo(
-            yearStem = "庚", yearBranch = "午",
-            monthStem = "辛", monthBranch = "巳",
-            dayStem = "庚", dayBranch = "辰",
-            hourStem = "甲", hourBranch = "申"
         )
     }
 

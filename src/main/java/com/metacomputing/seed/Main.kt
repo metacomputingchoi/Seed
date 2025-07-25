@@ -10,11 +10,11 @@ import com.metacomputing.seed.database.HanjaDatabase
 fun main() {
     // 사주 정보 가져오기
     val result = getTimePointData(
-        year = 1990,
-        month = 5,
-        day = 15,
-        hour = 15,
-        minute = 30,
+        year = 1986,
+        month = 4,
+        day = 19,
+        hour = 5,
+        minute = 45,
         timezOffset = -540,  // 한국 시간 (GMT+9)
         lang = 0             // 0: 한국어, 1: 영어
     )
@@ -26,15 +26,15 @@ fun main() {
 
     // 이름 입력 예시
     val nameInput = NameInput(
-        surname = "김",
-        surnameHanja = "金",
-        givenName = "민수",
-        givenNameHanja = "民秀",
-        birthYear = 1990,
-        birthMonth = 5,
-        birthDay = 15,
-        birthHour = 15,
-        birthMinute = 30,
+        surname = "최",
+        surnameHanja = "崔",
+        givenName = "성수",
+        givenNameHanja = "成秀",
+        birthYear = 1986,
+        birthMonth = 4,
+        birthDay = 19,
+        birthHour = 5,
+        birthMinute = 45,
         timezoneOffset = -540
     )
 

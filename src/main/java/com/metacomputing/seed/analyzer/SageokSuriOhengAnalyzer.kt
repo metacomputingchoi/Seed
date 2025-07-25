@@ -1,7 +1,6 @@
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
-import com.metacomputing.seed.util.OhengUtil
 
 class SageokSuriOhengAnalyzer {
     fun analyze(sageokSuri: SageokSuri): SageokSuriOheng {
@@ -13,33 +12,32 @@ class SageokSuriOhengAnalyzer {
             "수(水)" to 0
         )
 
-        // 원격의 오행
-        val wonOheng = OhengUtil.getOhengByStroke(sageokSuri.wonGyeok)
-        ohengCount["${wonOheng}(${getHanja(wonOheng)})"] = ohengCount["${wonOheng}(${getHanja(wonOheng)})"]!! + 1
+        // 이격의 오행 (끝자리로 계산)
+        val iLastDigit = sageokSuri.iGyeok!! % 10
+        val iOheng = getOhengByLastDigit(iLastDigit)
+        ohengCount[iOheng] = ohengCount[iOheng]!! + 1
 
-        // 형격의 오행
-        val hyeongOheng = OhengUtil.getOhengByStroke(sageokSuri.hyeongGyeok)
-        ohengCount["${hyeongOheng}(${getHanja(hyeongOheng)})"] = ohengCount["${hyeongOheng}(${getHanja(hyeongOheng)})"]!! + 1
+        // 형격의 오행 (끝자리로 계산)
+        val hyeongLastDigit = sageokSuri.hyeongGyeok % 10
+        val hyeongOheng = getOhengByLastDigit(hyeongLastDigit)
+        ohengCount[hyeongOheng] = ohengCount[hyeongOheng]!! + 1
 
-        // 이격의 오행
-        val iOheng = OhengUtil.getOhengByStroke(sageokSuri.iGyeok!!)
-        ohengCount["${iOheng}(${getHanja(iOheng)})"] = ohengCount["${iOheng}(${getHanja(iOheng)})"]!! + 1
-
-        // 정격의 오행
-        val jeongOheng = OhengUtil.getOhengByStroke(sageokSuri.jeongGyeok)
-        ohengCount["${jeongOheng}(${getHanja(jeongOheng)})"] = ohengCount["${jeongOheng}(${getHanja(jeongOheng)})"]!! + 1
+        // 원격의 오행 (끝자리로 계산)
+        val wonLastDigit = sageokSuri.wonGyeok % 10
+        val wonOheng = getOhengByLastDigit(wonLastDigit)
+        ohengCount[wonOheng] = ohengCount[wonOheng]!! + 1
 
         return SageokSuriOheng(ohengDistribution = ohengCount)
     }
 
-    private fun getHanja(oheng: String): String {
-        return when(oheng) {
-            "목" -> "木"
-            "화" -> "火"
-            "토" -> "土"
-            "금" -> "金"
-            "수" -> "水"
-            else -> ""
+    private fun getOhengByLastDigit(lastDigit: Int): String {
+        return when (lastDigit) {
+            1, 2 -> "목(木)"
+            3, 4 -> "화(火)"
+            5, 6 -> "토(土)"
+            7, 8 -> "금(金)"
+            9, 0 -> "수(水)"
+            else -> "토(土)"
         }
     }
 }
