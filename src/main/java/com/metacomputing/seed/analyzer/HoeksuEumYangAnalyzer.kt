@@ -9,6 +9,7 @@ class HoeksuEumYangAnalyzer {
     fun analyze(nameInput: NameInput): HoeksuEumYang {
         var eumCount = 0
         var yangCount = 0
+        val arrangement = mutableListOf<String>()
 
         // 성씨 한자 분석
         val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
@@ -17,7 +18,13 @@ class HoeksuEumYangAnalyzer {
             if (parts.size == 2) {
                 val hanjaInfo = hanjaDB.getHanjaInfo(parts[0], parts[1], true)
                 val eumyang = hanjaInfo?.integratedInfo?.strokeEumyang ?: 0
-                if (eumyang == 0) eumCount++ else yangCount++
+                if (eumyang == 0) {
+                    eumCount++
+                    arrangement.add("음")
+                } else {
+                    yangCount++
+                    arrangement.add("양")
+                }
             }
         }
 
@@ -26,12 +33,19 @@ class HoeksuEumYangAnalyzer {
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
             val eumyang = hanjaInfo?.integratedInfo?.strokeEumyang ?: 0
-            if (eumyang == 0) eumCount++ else yangCount++
+            if (eumyang == 0) {
+                eumCount++
+                arrangement.add("음")
+            } else {
+                yangCount++
+                arrangement.add("양")
+            }
         }
 
         return HoeksuEumYang(
             eumCount = eumCount,
-            yangCount = yangCount
+            yangCount = yangCount,
+            arrangement = arrangement
         )
     }
 }

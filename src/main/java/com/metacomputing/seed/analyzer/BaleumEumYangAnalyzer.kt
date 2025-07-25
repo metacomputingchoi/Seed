@@ -9,6 +9,7 @@ class BaleumEumYangAnalyzer {
     fun analyze(nameInput: NameInput): BaleumEumYang {
         var eumCount = 0
         var yangCount = 0
+        val arrangement = mutableListOf<String>()
 
         // 성씨 발음 음양 분석
         val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
@@ -17,7 +18,13 @@ class BaleumEumYangAnalyzer {
             if (parts.size == 2) {
                 val hanjaInfo = hanjaDB.getHanjaInfo(parts[0], parts[1], true)
                 val eumyang = hanjaInfo?.integratedInfo?.soundEumyang ?: 0
-                if (eumyang == 0) eumCount++ else yangCount++
+                if (eumyang == 0) {
+                    eumCount++
+                    arrangement.add("음")
+                } else {
+                    yangCount++
+                    arrangement.add("양")
+                }
             }
         }
 
@@ -26,12 +33,19 @@ class BaleumEumYangAnalyzer {
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
             val eumyang = hanjaInfo?.integratedInfo?.soundEumyang ?: 0
-            if (eumyang == 0) eumCount++ else yangCount++
+            if (eumyang == 0) {
+                eumCount++
+                arrangement.add("음")
+            } else {
+                yangCount++
+                arrangement.add("양")
+            }
         }
 
         return BaleumEumYang(
             eumCount = eumCount,
-            yangCount = yangCount
+            yangCount = yangCount,
+            arrangement = arrangement
         )
     }
 }

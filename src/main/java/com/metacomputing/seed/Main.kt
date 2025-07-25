@@ -1,6 +1,5 @@
 package com.metacomputing.seed
 
-import com.metacomputing.mcalendar.CalSDK.getTimePointData
 import com.metacomputing.seed.analyzer.NameAnalyzer
 import com.metacomputing.seed.model.NameInput
 import com.metacomputing.seed.statistics.NameStatisticsLoader
@@ -8,24 +7,8 @@ import com.metacomputing.seed.statistics.NameStatisticsAnalyzer
 import com.metacomputing.seed.database.HanjaDatabase
 
 fun main() {
-    // 사주 정보 가져오기
-    val result = getTimePointData(
-        year = 1986,
-        month = 4,
-        day = 19,
-        hour = 5,
-        minute = 45,
-        timezOffset = -540,  // 한국 시간 (GMT+9)
-        lang = 0             // 0: 한국어, 1: 영어
-    )
-
-    println("=== 사주 정보 ===")
-    println("생년월일시: ${result.dateTime.localTime}")
-    println("사주: ${result.sexagenaryInfo.year} ${result.sexagenaryInfo.month} ${result.sexagenaryInfo.day} ${result.sexagenaryInfo.hour}")
-    println()
-
-    // 이름 입력 예시
-    val nameInput = NameInput(
+    // 이름 입력 생성 (TimePointResult 자동 계산)
+    val nameInput = NameInput.create(
         surname = "최",
         surnameHanja = "崔",
         givenName = "성수",
@@ -35,8 +18,13 @@ fun main() {
         birthDay = 19,
         birthHour = 5,
         birthMinute = 45,
-        timezoneOffset = -540
+        timezoneOffset = -540  // 한국 시간 (GMT+9)
     )
+
+    println("=== 사주 정보 ===")
+    println("생년월일시: ${nameInput.birthDateTime}")
+    println("사주: ${nameInput.timePointResult.sexagenaryInfo.year} ${nameInput.timePointResult.sexagenaryInfo.month} ${nameInput.timePointResult.sexagenaryInfo.day} ${nameInput.timePointResult.sexagenaryInfo.hour}")
+    println()
 
     // 한자 정보 출력
     println("=== 한자 정보 ===")
@@ -104,7 +92,7 @@ fun main() {
 
     // 이름 분석
     val analyzer = NameAnalyzer()
-    val evaluation = analyzer.analyze(nameInput, result)
+    val evaluation = analyzer.analyze(nameInput)
 
     // 결과 출력
     println("=== 이름 평가 결과 ===")
@@ -115,36 +103,67 @@ fun main() {
 
     // 원형이정 사격수리
     println("[원형이정 사격수리]")
-    println("원격(元格): ${evaluation.sageokSuri.wonGyeok}획 (${evaluation.sageokSuri.wonGyeokFortune})")
-    println("형격(亨格): ${evaluation.sageokSuri.hyeongGyeok}획 (${evaluation.sageokSuri.hyeongGyeokFortune})")
-    println("이격(利格): ${evaluation.sageokSuri.iGyeok}획 (${evaluation.sageokSuri.iGyeokFortune})")
-    println("정격(貞格): ${evaluation.sageokSuri.jeongGyeok}획 (${evaluation.sageokSuri.jeongGyeokFortune})")
+    println("원격(元格): ${evaluation.sageokSuri.wonGyeok}획 - ${evaluation.sageokSuri.wonGyeokFortune}")
+    println("  ${evaluation.sageokSuri.wonGyeokMeaning}")
+    println("형격(亨格): ${evaluation.sageokSuri.hyeongGyeok}획 - ${evaluation.sageokSuri.hyeongGyeokFortune}")
+    println("  ${evaluation.sageokSuri.hyeongGyeokMeaning}")
+    println("이격(利格): ${evaluation.sageokSuri.iGyeok}획 - ${evaluation.sageokSuri.iGyeokFortune}")
+    println("  ${evaluation.sageokSuri.iGyeokMeaning}")
+    println("정격(貞格): ${evaluation.sageokSuri.jeongGyeok}획 - ${evaluation.sageokSuri.jeongGyeokFortune}")
+    println("  ${evaluation.sageokSuri.jeongGyeokMeaning}")
     println()
 
     // 오행 분석
     println("[오행 분석]")
-    println("사격수리 오행:")
+
+    // 사격수리 오행 배치
+    println("사격수리 오행 배치 (이격-형격-원격): ${evaluation.sageokSuriOheng.arrangement.joinToString("")}")
+    println("사격수리 오행 분포:")
     evaluation.sageokSuriOheng.ohengDistribution.forEach { (element, count) ->
         println("  $element: $count 개")
     }
+
+    // 사주 오행
     println("사주 오행:")
     evaluation.sajuOheng.ohengDistribution.forEach { (element, count) ->
         println("  $element: $count 개")
     }
+
+    // 획수 오행 배치
+    println("획수 오행 배치 (성명 순서): ${evaluation.hoeksuOheng.arrangement.joinToString("")}")
     println("획수 오행 (자원오행):")
     evaluation.hoeksuOheng.ohengDistribution.forEach { (element, count) ->
         println("  $element: $count 개")
     }
+
+    // 발음 오행 배치
+    println("발음 오행 배치 (성명 순서): ${evaluation.baleumOheng.arrangement.joinToString("")}")
     println("발음 오행:")
     evaluation.baleumOheng.ohengDistribution.forEach { (element, count) ->
+        println("  $element: $count 개")
+    }
+
+    // 사주이름오행 (사주 + 이름 획수오행)
+    println("사주이름오행 (사주 + 이름 획수오행):")
+    evaluation.sajuNameOheng.ohengDistribution.forEach { (element, count) ->
         println("  $element: $count 개")
     }
     println()
 
     // 음양 분석
     println("[음양 분석]")
+
+    // 사격수리 음양 배치
+    println("사격수리 음양 배치 (이격-형격-원격): ${evaluation.sageokSuriEumYang.arrangement.joinToString("")}")
     println("사격수리 음양 - 음: ${evaluation.sageokSuriEumYang.eumCount}, 양: ${evaluation.sageokSuriEumYang.yangCount}")
+
     println("사주 음양 - 음: ${evaluation.sajuEumYang.eumCount}, 양: ${evaluation.sajuEumYang.yangCount}")
+
+    // 획수 음양 배치
+    println("획수 음양 배치 (성명 순서): ${evaluation.hoeksuEumYang.arrangement.joinToString("")}")
     println("획수 음양 - 음: ${evaluation.hoeksuEumYang.eumCount}, 양: ${evaluation.hoeksuEumYang.yangCount}")
+
+    // 발음 음양 배치
+    println("발음 음양 배치 (성명 순서): ${evaluation.baleumEumYang.arrangement.joinToString("")}")
     println("발음 음양 - 음: ${evaluation.baleumEumYang.eumCount}, 양: ${evaluation.baleumEumYang.yangCount}")
 }
