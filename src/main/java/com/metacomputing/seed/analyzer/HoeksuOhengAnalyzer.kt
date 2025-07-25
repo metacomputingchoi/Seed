@@ -1,11 +1,11 @@
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
-import com.metacomputing.seed.util.StrokeCounter
+import com.metacomputing.seed.database.HanjaDatabase
 import com.metacomputing.seed.util.OhengUtil
 
 class HoeksuOhengAnalyzer {
-    private val strokeCounter = StrokeCounter()
+    private val hanjaDB = HanjaDatabase()
 
     fun analyze(nameInput: NameInput): HoeksuOheng {
         val ohengCount = mutableMapOf(
@@ -16,10 +16,21 @@ class HoeksuOhengAnalyzer {
             "수(水)" to 0
         )
 
-        // 성씨와 이름의 각 글자별 획수 계산
-        val allHanja = nameInput.surnameHanja + nameInput.givenNameHanja
-        allHanja.forEach { hanja ->
-            val strokes = strokeCounter.countStrokes(hanja.toString())
+        // 성씨 한자 분석
+        val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
+        surnamePairs.forEach { pair ->
+            val parts = pair.split("/")
+            if (parts.size == 2) {
+                val strokes = hanjaDB.getHanjaStrokes(parts[0], parts[1], true)
+                val oheng = OhengUtil.getOhengByStroke(strokes)
+                ohengCount["${oheng}(${getHanja(oheng)})"] = ohengCount["${oheng}(${getHanja(oheng)})"]!! + 1
+            }
+        }
+
+        // 이름 한자 분석
+        nameInput.givenName.forEachIndexed { index, char ->
+            val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
+            val strokes = hanjaDB.getHanjaStrokes(char.toString(), hanjaChar, false)
             val oheng = OhengUtil.getOhengByStroke(strokes)
             ohengCount["${oheng}(${getHanja(oheng)})"] = ohengCount["${oheng}(${getHanja(oheng)})"]!! + 1
         }
