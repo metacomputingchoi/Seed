@@ -1,37 +1,128 @@
-// Main.kt
 package com.metacomputing.seed
 
-import com.metacomputing.seed.core.DataConfig
-import com.metacomputing.seed.domain.model.name.Name
-import com.metacomputing.seed.domain.model.profile.Profile
-import com.metacomputing.seed.domain.model.profile.Gender
-import com.metacomputing.seed.domain.model.profile.BloodType
-import com.metacomputing.seed.services.naming.NamingConfig
-import com.metacomputing.seed.util.logging.PrintLogger
-import java.time.LocalDateTime
+import com.metacomputing.mcalendar.CalSDK.getTimePointData
+import com.metacomputing.seed.analyzer.NameAnalyzer
+import com.metacomputing.seed.model.NameInput
+import com.metacomputing.seed.statistics.NameStatisticsLoader
+import com.metacomputing.seed.statistics.NameStatisticsAnalyzer
 
 fun main() {
-    val logger = PrintLogger("Seed")
-    val seed = Seed.create(
-        dataConfig = DataConfig.default(),
-        logger = logger
+    // 사주 정보 가져오기
+    val result = getTimePointData(
+        year = 1990,
+        month = 5,
+        day = 15,
+        hour = 15,
+        minute = 30,
+        timezOffset = -540,  // 한국 시간 (GMT+9)
+        lang = 0             // 0: 한국어, 1: 영어
     )
 
-    val profile = Profile.create(
-        name = Name.fromTriples(
-            Triple("이", "李", false),
-            Triple("서", "瑞", false),
-            Triple("준", "俊", false)
-        ),
-        birthDateTime = LocalDateTime.of(2000, 6, 15, 14, 45),
-        birthPlace = "Seoul",
-        currentPlace = "Los Angeles",
-        currentDateTime = LocalDateTime.of(2024, 12, 25, 15, 30),
-        gender = Gender.MALE,
-        bloodType = BloodType.A_POSITIVE,
-        mbti = "INTJ"
+    println("=== 사주 정보 ===")
+    println("생년월일시: ${result.dateTime.localTime}")
+    println("사주: ${result.sexagenaryInfo.year} ${result.sexagenaryInfo.month} ${result.sexagenaryInfo.day} ${result.sexagenaryInfo.hour}")
+    println()
+
+    // 이름 입력 예시
+    val nameInput = NameInput(
+        surname = "김",
+        surnameHanja = "金",
+        givenName = "민수",
+        givenNameHanja = "民秀",
+        birthYear = 1990,
+        birthMonth = 5,
+        birthDay = 15,
+        birthHour = 15,
+        birthMinute = 30,
+        timezoneOffset = -540
     )
 
-    val naming = seed.naming(profile)
-    println(naming.generate(profile, NamingConfig()))
+    // 이름 통계 정보 로드
+    val statsLoader = NameStatisticsLoader()
+    val nameStats = statsLoader.loadStatistics()
+    val statsAnalyzer = NameStatisticsAnalyzer()
+
+    // 통계 정보 출력
+    println("=== 이름 통계 정보 ===")
+    val givenNameStats = nameStats[nameInput.givenName]
+    if (givenNameStats != null) {
+        println("이름: ${nameInput.givenName}")
+
+        // 유사 이름
+        if (givenNameStats.similarNames.isNotEmpty()) {
+            println("유사 이름: ${givenNameStats.similarNames.take(5).joinToString(", ")}...")
+        }
+
+        // 인기도 분석
+        val popularity = statsAnalyzer.analyzePopularity(givenNameStats)
+        println("인기도 분석:")
+        println("  최고 순위: ${popularity.highestRank}위 (${popularity.highestRankYear}년)")
+        println("  최근 순위: ${popularity.recentRank}위 (${popularity.recentYear}년)")
+        println("  순위 추세: ${popularity.trend}")
+
+        // 성별 분포
+        val genderDist = statsAnalyzer.analyzeGenderDistribution(givenNameStats)
+        println("성별 분포:")
+        println("  남자: ${genderDist.malePercentage}%")
+        println("  여자: ${genderDist.femalePercentage}%")
+        println("  성별 특성: ${genderDist.genderCharacteristic}")
+
+        // 출생아 수 추이
+        val birthTrend = statsAnalyzer.analyzeBirthTrend(givenNameStats)
+        println("출생아 수 추이:")
+        println("  총 출생아 수: ${birthTrend.totalBirths}명")
+        println("  평균 연간 출생아 수: ${birthTrend.averagePerYear}명")
+        println("  추세: ${birthTrend.trend}")
+    } else {
+        println("'${nameInput.givenName}'에 대한 통계 정보가 없습니다.")
+    }
+    println()
+
+    // 이름 분석
+    val analyzer = NameAnalyzer()
+    val evaluation = analyzer.analyze(nameInput, result)
+
+    // 결과 출력
+    println("=== 이름 평가 결과 ===")
+    println("성명: ${nameInput.surname}${nameInput.givenName} (${nameInput.surnameHanja}${nameInput.givenNameHanja})")
+    println()
+    println("종합 점수: ${evaluation.totalScore}/100")
+    println()
+
+    // 원형이정 사격수리
+    println("[원형이정 사격수리]")
+    println("원격(元格): ${evaluation.sageokSuri.wonGyeok}획 (${evaluation.sageokSuri.wonGyeokFortune})")
+    println("형격(亨格): ${evaluation.sageokSuri.hyeongGyeok}획 (${evaluation.sageokSuri.hyeongGyeokFortune})")
+    evaluation.sageokSuri.iGyeok?.let {
+        println("이격(利格): ${it}획 (${evaluation.sageokSuri.iGyeokFortune})")
+    }
+    println("정격(貞格): ${evaluation.sageokSuri.jeongGyeok}획 (${evaluation.sageokSuri.jeongGyeokFortune})")
+    println()
+
+    // 오행 분석
+    println("[오행 분석]")
+    println("사격수리 오행:")
+    evaluation.sageokSuriOheng.ohengDistribution.forEach { (element, count) ->
+        println("  $element: $count 개")
+    }
+    println("사주 오행:")
+    evaluation.sajuOheng.ohengDistribution.forEach { (element, count) ->
+        println("  $element: $count 개")
+    }
+    println("획수 오행:")
+    evaluation.hoeksuOheng.ohengDistribution.forEach { (element, count) ->
+        println("  $element: $count 개")
+    }
+    println("발음 오행:")
+    evaluation.baleumOheng.ohengDistribution.forEach { (element, count) ->
+        println("  $element: $count 개")
+    }
+    println()
+
+    // 음양 분석
+    println("[음양 분석]")
+    println("사격수리 음양 - 음: ${evaluation.sageokSuriEumYang.eumCount}, 양: ${evaluation.sageokSuriEumYang.yangCount}")
+    println("사주 음양 - 음: ${evaluation.sajuEumYang.eumCount}, 양: ${evaluation.sajuEumYang.yangCount}")
+    println("획수 음양 - 음: ${evaluation.hoeksuEumYang.eumCount}, 양: ${evaluation.hoeksuEumYang.yangCount}")
+    println("발음 음양 - 음: ${evaluation.baleumEumYang.eumCount}, 양: ${evaluation.baleumEumYang.yangCount}")
 }
