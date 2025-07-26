@@ -7,40 +7,23 @@ import kotlinx.serialization.json.Json
 import java.io.File
 
 class StrokeMeaningDatabase {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
-
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private var strokeData: StrokeData? = null
 
-    init {
-        loadStrokeData()
-    }
+    init { loadStrokeData() }
 
     private fun loadStrokeData() {
-        try {
-            val resourcePath = "resources/seed/data/stroke_data.json"
-            val file = File(resourcePath)
+        val resourcePath = "resources/seed/data/stroke_data.json"
+        val file = File(resourcePath)
 
-            strokeData = if (file.exists()) {
-                val jsonString = file.readText()
-                json.decodeFromString(StrokeData.serializer(), jsonString)
-            } else {
-                val resourceStream = this::class.java.classLoader.getResourceAsStream(
-                    "seed/data/stroke_data.json"
-                )
-                resourceStream?.use { stream ->
-                    val jsonString = stream.bufferedReader().use { it.readText() }
-                    json.decodeFromString(StrokeData.serializer(), jsonString)
-                }
+        strokeData = if (file.exists()) {
+            json.decodeFromString(StrokeData.serializer(), file.readText())
+        } else {
+            javaClass.classLoader.getResourceAsStream("seed/data/stroke_data.json")?.use { stream ->
+                json.decodeFromString(StrokeData.serializer(), stream.bufferedReader().use { it.readText() })
             }
-        } catch (e: Exception) {
-            println("획수 의미 데이터 로드 실패: ${e.message}")
         }
     }
 
-    fun getStrokeMeaning(strokes: Int): StrokeMeaning? {
-        return strokeData?.strokeMeanings?.get(strokes.toString())
-    }
+    fun getStrokeMeaning(strokes: Int) = strokeData?.strokeMeanings?.get(strokes.toString())
 }

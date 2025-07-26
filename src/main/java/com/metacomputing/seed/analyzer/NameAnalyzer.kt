@@ -2,130 +2,235 @@
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
+import com.metacomputing.seed.*
+import com.metacomputing.seed.database.HanjaDatabase
+import com.metacomputing.seed.database.StrokeMeaningDatabase
+import com.metacomputing.mcalendar.TimePointResult
 import com.metacomputing.seed.util.OhaengRelationUtil
 import com.metacomputing.seed.util.PassFailUtil
 
 class NameAnalyzer {
-    private val sajuAnalyzer = SajuAnalyzer()
-    private val sageokSuriAnalyzer = SageokSuriAnalyzer()
-    private val sageokSuriOhaengAnalyzer = SageokSuriOhaengAnalyzer()
-    private val sageokSuriEumYangAnalyzer = SageokSuriEumYangAnalyzer()
-    private val sajuOhaengAnalyzer = SajuOhaengAnalyzer()
-    private val sajuEumYangAnalyzer = SajuEumYangAnalyzer()
-    private val hoeksuOhaengAnalyzer = HoeksuOhaengAnalyzer()
-    private val hoeksuEumYangAnalyzer = HoeksuEumYangAnalyzer()
-    private val baleumOhaengAnalyzer = BaleumOhaengAnalyzer()
-    private val baleumEumYangAnalyzer = BaleumEumYangAnalyzer()
-    private val sajuNameOhaengAnalyzer = SajuNameOhaengAnalyzer()
-
-    private val jawonOhaengAnalyzer = JawonOhaengAnalyzer()
+    private val hanjaDB = HanjaDatabase()
+    private val strokeDB = StrokeMeaningDatabase()
 
     fun analyze(nameInput: NameInput): NameEvaluation {
-        val sajuInfo = sajuAnalyzer.extractSajuInfo(nameInput.timePointResult)
+        val sajuInfo = extractSajuInfo(nameInput.timePointResult)
+        val sageokSuri = analyzeSageokSuri(nameInput)
 
-        val sageokSuri = sageokSuriAnalyzer.analyze(nameInput)
-        val sageokSuriOhaeng = sageokSuriOhaengAnalyzer.analyze(sageokSuri)
-        val sageokSuriEumYang = sageokSuriEumYangAnalyzer.analyze(sageokSuri)
-        val sajuOhaeng = sajuOhaengAnalyzer.analyze(sajuInfo)
-        val sajuEumYang = sajuEumYangAnalyzer.analyze(sajuInfo)
-        val hoeksuOhaeng = hoeksuOhaengAnalyzer.analyze(nameInput)
-        val hoeksuEumYang = hoeksuEumYangAnalyzer.analyze(nameInput)
-        val baleumOhaeng = baleumOhaengAnalyzer.analyze(nameInput)
-        val baleumEumYang = baleumEumYangAnalyzer.analyze(nameInput)
-        val sajuNameOhaeng = sajuNameOhaengAnalyzer.analyze(sajuOhaeng, hoeksuOhaeng, nameInput)
-        val jawonOhaeng = jawonOhaengAnalyzer.analyze(nameInput)
+        val analyzers = mapOf(
+            "sageokSuriOhaeng" to { analyzeSageokSuriOhaeng(sageokSuri) },
+            "sageokSuriEumYang" to { analyzeSageokSuriEumYang(sageokSuri) },
+            "sajuOhaeng" to { analyzeSajuOhaeng(sajuInfo) },
+            "sajuEumYang" to { analyzeSajuEumYang(sajuInfo) },
+            "hoeksuOhaeng" to { analyzeOhaeng(nameInput, "stroke") },
+            "hoeksuEumYang" to { analyzeEumYang(nameInput, "stroke") },
+            "baleumOhaeng" to { analyzeOhaeng(nameInput, "sound") },
+            "baleumEumYang" to { analyzeEumYang(nameInput, "sound") },
+            "jawonOhaeng" to { analyzeJawonOhaeng(nameInput) }
+        )
+
+        val results = analyzers.mapValues { it.value() }
+        val sajuNameOhaeng = analyzeSajuNameOhaeng(
+            results["sajuOhaeng"] as OhaengData,
+            results["jawonOhaeng"] as OhaengData
+        )
 
         val detailedScores = calculateDetailedScores(
-            sageokSuri, sageokSuriOhaeng, sageokSuriEumYang,
-            sajuOhaeng, sajuEumYang, hoeksuOhaeng, hoeksuEumYang,
-            baleumOhaeng, baleumEumYang, sajuNameOhaeng, jawonOhaeng,
-            nameInput
+            sageokSuri, results, sajuNameOhaeng, nameInput
         )
 
         val totalScore = calculateWeightedTotalScore(detailedScores)
 
         return NameEvaluation(
-            totalScore = totalScore,
-            detailedScores = detailedScores,
-            sageokSuri = sageokSuri,
-            sageokSuriOhaeng = sageokSuriOhaeng,
-            sageokSuriEumYang = sageokSuriEumYang,
-            sajuOhaeng = sajuOhaeng,
-            sajuEumYang = sajuEumYang,
-            hoeksuOhaeng = hoeksuOhaeng,
-            hoeksuEumYang = hoeksuEumYang,
-            baleumOhaeng = baleumOhaeng,
-            baleumEumYang = baleumEumYang,
-            sajuNameOhaeng = sajuNameOhaeng,
-            jawonOhaeng = jawonOhaeng
+            totalScore, detailedScores, sageokSuri,
+            results["sageokSuriOhaeng"] as OhaengData,
+            results["sageokSuriEumYang"] as EumYangData,
+            results["sajuOhaeng"] as OhaengData,
+            results["sajuEumYang"] as EumYangData,
+            results["hoeksuOhaeng"] as OhaengData,
+            results["hoeksuEumYang"] as EumYangData,
+            results["baleumOhaeng"] as OhaengData,
+            results["baleumEumYang"] as EumYangData,
+            sajuNameOhaeng,
+            results["jawonOhaeng"] as OhaengData
         )
+    }
+
+    private fun extractSajuInfo(time: TimePointResult) = with(time.sexagenaryInfo) {
+        SajuInfo(
+            year.substring(0, 1), year.substring(1, 2),
+            month.substring(0, 1), month.substring(1, 2),
+            day.substring(0, 1), day.substring(1, 2),
+            hour.substring(0, 1), hour.substring(1, 2)
+        )
+    }
+
+    private fun analyzeSageokSuri(nameInput: NameInput): SageokSuri {
+        val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
+        val surnameStrokes = surnamePairs.map { pair ->
+            val parts = pair.split("/")
+            if (parts.size == 2) hanjaDB.getHanjaStrokes(parts[0], parts[1], true) else 0
+        }
+
+        val givenNameStrokes = nameInput.givenName.mapIndexed { i, char ->
+            hanjaDB.getHanjaStrokes(char.toString(), nameInput.givenNameHanja.getOrNull(i)?.toString() ?: "", false)
+        }
+
+        val allStrokes = surnameStrokes + givenNameStrokes
+        val nameStrokes = givenNameStrokes.toMutableList().apply { if (size == 1) add(0) }
+
+        val myeongsangja = nameStrokes.subList(0, nameStrokes.size / 2).sum()
+        val myeonghaja = nameStrokes.subList(nameStrokes.size / 2, nameStrokes.size).sum()
+
+        val jeong = allStrokes.sum()
+        val won = nameStrokes.sum()
+        val i = surnameStrokes.sum() + myeonghaja
+        val hyeong = surnameStrokes.sum() + myeongsangja
+
+        return listOf(won, hyeong, i, jeong).map { adjustTo81(it) }.let { adjusted ->
+            SageokSuri(
+                adjusted[0], getMeaning(adjusted[0], "luckyLevel"), getMeaning(adjusted[0], "summary"),
+                adjusted[1], getMeaning(adjusted[1], "luckyLevel"), getMeaning(adjusted[1], "summary"),
+                adjusted[2], getMeaning(adjusted[2], "luckyLevel"), getMeaning(adjusted[2], "summary"),
+                adjusted[3], getMeaning(adjusted[3], "luckyLevel"), getMeaning(adjusted[3], "summary")
+            )
+        }
+    }
+
+    private fun getMeaning(strokes: Int, field: String) = 
+        strokeDB.getStrokeMeaning(strokes)?.let {
+            if (field == "luckyLevel") it.luckyLevel else it.summary
+        } ?: ""
+
+    private fun adjustTo81(value: Int) = if (value <= 81) value else ((value - 1) % 81) + 1
+
+    private fun analyzeSageokSuriOhaeng(sageokSuri: SageokSuri): OhaengData {
+        val dist = mutableMapOf("목(木)" to 0, "화(火)" to 0, "토(土)" to 0, "금(金)" to 0, "수(水)" to 0)
+        val arr = listOf(sageokSuri.iGyeok, sageokSuri.hyeongGyeok, sageokSuri.wonGyeok).map { 
+            it.toOhaengByLastDigit().also { ohaeng -> dist[ohaeng] = dist[ohaeng]!! + 1 }.substring(0, 1)
+        }
+        return OhaengData(dist, arr)
+    }
+
+    private fun analyzeSageokSuriEumYang(sageokSuri: SageokSuri): EumYangData {
+        val arr = listOf(sageokSuri.iGyeok, sageokSuri.hyeongGyeok, sageokSuri.wonGyeok).map { it.toEumYang() }
+        return EumYangData(arr.count { it == "음" }, arr.count { it == "양" }, arr)
+    }
+
+    private fun analyzeSajuOhaeng(sajuInfo: SajuInfo): OhaengData {
+        val dist = mutableMapOf("목(木)" to 0, "화(火)" to 0, "토(土)" to 0, "금(金)" to 0, "수(水)" to 0)
+        listOf(sajuInfo.yearStem, sajuInfo.monthStem, sajuInfo.dayStem, sajuInfo.hourStem).forEach {
+            Constants.STEM_OHAENG[it.normalize()]?.let { ohaeng -> dist[ohaeng] = dist[ohaeng]!! + 1 }
+        }
+        listOf(sajuInfo.yearBranch, sajuInfo.monthBranch, sajuInfo.dayBranch, sajuInfo.hourBranch).forEach {
+            Constants.BRANCH_OHAENG[it.normalize()]?.let { ohaeng -> dist[ohaeng] = dist[ohaeng]!! + 1 }
+        }
+        return OhaengData(dist)
+    }
+
+    private fun analyzeSajuEumYang(sajuInfo: SajuInfo): EumYangData {
+        var eum = 0
+        var yang = 0
+        listOf(sajuInfo.yearStem, sajuInfo.monthStem, sajuInfo.dayStem, sajuInfo.hourStem).forEach {
+            if (Constants.YANG_STEMS.contains(it.normalize())) yang++ else eum++
+        }
+        listOf(sajuInfo.yearBranch, sajuInfo.monthBranch, sajuInfo.dayBranch, sajuInfo.hourBranch).forEach {
+            if (Constants.YANG_BRANCHES.contains(it.normalize())) yang++ else eum++
+        }
+        return EumYangData(eum, yang)
+    }
+
+    private fun analyzeOhaeng(nameInput: NameInput, type: String): OhaengData {
+        val dist = mutableMapOf("목(木)" to 0, "화(火)" to 0, "토(土)" to 0, "금(金)" to 0, "수(水)" to 0)
+        val arr = mutableListOf<String>()
+
+        hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja).forEach { pair ->
+            val parts = pair.split("/")
+            if (parts.size == 2) {
+                val info = hanjaDB.getHanjaInfo(parts[0], parts[1], true)
+                val ohaeng = if (type == "stroke") info?.strokeElement else info?.soundOhaeng
+                val key = (ohaeng ?: "土").toOhaengFull()
+                dist[key] = dist[key]!! + 1
+                arr.add(key.substring(0, 1))
+            }
+        }
+
+        nameInput.givenName.forEachIndexed { i, char ->
+            val info = hanjaDB.getHanjaInfo(char.toString(), nameInput.givenNameHanja.getOrNull(i)?.toString() ?: "", false)
+            val ohaeng = if (type == "stroke") info?.strokeElement else info?.soundOhaeng
+            val key = (ohaeng ?: "土").toOhaengFull()
+            dist[key] = dist[key]!! + 1
+            arr.add(key.substring(0, 1))
+        }
+
+        return OhaengData(dist, arr)
+    }
+
+    private fun analyzeEumYang(nameInput: NameInput, type: String): EumYangData {
+        val arr = mutableListOf<String>()
+
+        hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja).forEach { pair ->
+            val parts = pair.split("/")
+            if (parts.size == 2) {
+                val info = hanjaDB.getHanjaInfo(parts[0], parts[1], true)
+                val eumyang = if (type == "stroke") info?.strokeEumyang else info?.soundEumyang
+                arr.add((eumyang ?: 0).toEumYang())
+            }
+        }
+
+        nameInput.givenName.forEachIndexed { i, char ->
+            val info = hanjaDB.getHanjaInfo(char.toString(), nameInput.givenNameHanja.getOrNull(i)?.toString() ?: "", false)
+            val eumyang = if (type == "stroke") info?.strokeEumyang else info?.soundEumyang
+            arr.add((eumyang ?: 0).toEumYang())
+        }
+
+        return EumYangData(arr.count { it == "음" }, arr.count { it == "양" }, arr)
+    }
+
+    private fun analyzeJawonOhaeng(nameInput: NameInput): OhaengData {
+        val dist = mutableMapOf("목(木)" to 0, "화(火)" to 0, "토(土)" to 0, "금(金)" to 0, "수(水)" to 0)
+        nameInput.givenName.forEachIndexed { i, char ->
+            val info = hanjaDB.getHanjaInfo(char.toString(), nameInput.givenNameHanja.getOrNull(i)?.toString() ?: "", false)
+            val key = (info?.sourceElement ?: "土").toOhaengFull()
+            dist[key] = dist[key]!! + 1
+        }
+        return OhaengData(dist)
+    }
+
+    private fun analyzeSajuNameOhaeng(sajuOhaeng: OhaengData, jawonOhaeng: OhaengData): OhaengData {
+        val combined = sajuOhaeng.ohaengDistribution.toMutableMap()
+        jawonOhaeng.ohaengDistribution.forEach { (k, v) -> combined[k] = combined[k]!! + v }
+        return OhaengData(combined)
     }
 
     private fun calculateDetailedScores(
-        sageokSuri: SageokSuri,
-        sageokSuriOhaeng: SageokSuriOhaeng,
-        sageokSuriEumYang: SageokSuriEumYang,
-        sajuOhaeng: SajuOhaeng,
-        sajuEumYang: SajuEumYang,
-        hoeksuOhaeng: HoeksuOhaeng,
-        hoeksuEumYang: HoeksuEumYang,
-        baleumOhaeng: BaleumOhaeng,
-        baleumEumYang: BaleumEumYang,
-        sajuNameOhaeng: SajuNameOhaeng,
-        jawonOhaeng: JawonOhaeng,
-        nameInput: NameInput
+        sageokSuri: SageokSuri, results: Map<String, Any>,
+        sajuNameOhaeng: OhaengData, nameInput: NameInput
     ): DetailedScores {
+        val surnameLength = if (nameInput.surname.length == 2) 2 else 1
+
         return DetailedScores(
-            sageokSuriScore = calculateSageokSuriScore(sageokSuri),
-            sageokSuriOhaengScore = calculateSageokSuriOhaengScore(sageokSuriOhaeng),
-            sageokSuriEumYangScore = calculateSageokSuriEumYangScore(sageokSuriEumYang),
-            sajuEumYangScore = calculateSajuEumYangScore(sajuEumYang),
-            hoeksuOhaengScore = calculateHoeksuOhaengScore(hoeksuOhaeng, nameInput),
-            hoeksuEumYangScore = calculateHoeksuEumYangScore(hoeksuEumYang, nameInput),
-            baleumOhaengScore = calculateBaleumOhaengScore(baleumOhaeng, nameInput),
-            baleumEumYangScore = calculateBaleumEumYangScore(baleumEumYang, nameInput),
-            sajuNameOhaengScore = calculateSajuNameOhaengScore(sajuOhaeng, sajuNameOhaeng, jawonOhaeng),
-            jawonOhaengScore = calculateJawonOhaengScore(sajuOhaeng, jawonOhaeng)
+            calculateSageokSuriScore(sageokSuri),
+            calculateSageokSuriOhaengScore(results["sageokSuriOhaeng"] as OhaengData),
+            calculateSageokSuriEumYangScore(results["sageokSuriEumYang"] as EumYangData),
+            calculateSajuEumYangScore(results["sajuEumYang"] as EumYangData),
+            calculateHoeksuOhaengScore(results["hoeksuOhaeng"] as OhaengData, surnameLength),
+            calculateEumYangScore(results["hoeksuEumYang"] as EumYangData, surnameLength, "획수음양"),
+            calculateBaleumOhaengScore(results["baleumOhaeng"] as OhaengData, surnameLength),
+            calculateEumYangScore(results["baleumEumYang"] as EumYangData, surnameLength, "발음음양"),
+            calculateSajuNameOhaengScore(results["sajuOhaeng"] as OhaengData, sajuNameOhaeng, results["jawonOhaeng"] as OhaengData),
+            calculateJawonOhaengScore(results["sajuOhaeng"] as OhaengData, results["jawonOhaeng"] as OhaengData)
         )
-    }
-
-    private fun calculateWeightedTotalScore(scores: DetailedScores): Int {
-
-        val weights = mapOf(
-            "sageokSuri" to 0.20,
-            "sajuNameOhaeng" to 0.20,
-            "sajuEumYang" to 0.0,
-            "hoeksuOhaeng" to 0.0,
-            "hoeksuEumYang" to 0.15,
-            "baleumOhaeng" to 0.15,
-            "baleumEumYang" to 0.15,
-            "sageokSuriOhaeng" to 0.15,
-            "sageokSuriEumYang" to 0.0,
-            "jawonOhaeng" to 0.0
-        )
-
-        val weightedScore =
-            scores.sageokSuriScore.score * weights["sageokSuri"]!! +
-                    scores.sajuNameOhaengScore.score * weights["sajuNameOhaeng"]!! +
-                    scores.sajuEumYangScore.score * weights["sajuEumYang"]!! +
-                    scores.hoeksuOhaengScore.score * weights["hoeksuOhaeng"]!! +
-                    scores.hoeksuEumYangScore.score * weights["hoeksuEumYang"]!! +
-                    scores.baleumOhaengScore.score * weights["baleumOhaeng"]!! +
-                    scores.baleumEumYangScore.score * weights["baleumEumYang"]!! +
-                    scores.sageokSuriOhaengScore.score * weights["sageokSuriOhaeng"]!! +
-                    scores.sageokSuriEumYangScore.score * weights["sageokSuriEumYang"]!! +
-                    scores.jawonOhaengScore.score * weights["jawonOhaeng"]!!
-
-        return weightedScore.toInt().coerceIn(0, 100)
     }
 
     private fun calculateSageokSuriScore(sageokSuri: SageokSuri): ScoreDetail {
-        var score = 0
-        val reasons = mutableListOf<String>()
-        var passCount = 0
+        val fortunes = listOf(
+            sageokSuri.wonGyeokFortune, sageokSuri.hyeongGyeokFortune,
+            sageokSuri.iGyeokFortune, sageokSuri.jeongGyeokFortune
+        )
 
-        fun getFortuneScore(fortune: String): Int {
-            return when {
+        val scores = fortunes.map { fortune ->
+            when {
                 fortune.contains("최상운수") -> 25
                 fortune.contains("상운수") -> 20
                 fortune.contains("양운수") -> 15
@@ -135,245 +240,49 @@ class NameAnalyzer {
             }
         }
 
-        val fortunes = listOf(
-            Pair("원격", sageokSuri.wonGyeokFortune),
-            Pair("형격", sageokSuri.hyeongGyeokFortune),
-            Pair("이격", sageokSuri.iGyeokFortune),
-            Pair("정격", sageokSuri.jeongGyeokFortune)
-        )
-
-        fortunes.forEach { (name, fortune) ->
-            val fortuneScore = getFortuneScore(fortune)
-            score += fortuneScore
-            reasons.add("$name: $fortune")
-
-            if (fortuneScore >= 15) passCount++
-        }
-
-        val isPassed = passCount == 4
+        val totalScore = scores.sum()
+        val passCount = scores.count { it >= 15 }
 
         return ScoreDetail(
-            score = score,
-            maxScore = 100,
-            reason = reasons.joinToString(", "),
-            isPassed = isPassed
+            totalScore, 100,
+            "원격: ${sageokSuri.wonGyeokFortune}, 형격: ${sageokSuri.hyeongGyeokFortune}, " +
+            "이격: ${sageokSuri.iGyeokFortune}, 정격: ${sageokSuri.jeongGyeokFortune}",
+            passCount == 4
         )
     }
 
-    private fun calculateSageokSuriOhaengScore(sageokSuriOhaeng: SageokSuriOhaeng): ScoreDetail {
-
-        val balanceScore = OhaengRelationUtil.calculateBalanceScore(sageokSuriOhaeng.ohaengDistribution) * 0.5
-
-        val arrayScore = OhaengRelationUtil.calculateArrayScore(sageokSuriOhaeng.arrangement) * 0.5
-
-        val isPassed = PassFailUtil.checkSageokSuriOhaeng(sageokSuriOhaeng.arrangement)
-
-        val totalScore = (balanceScore + arrayScore).toInt()
+    private fun calculateSageokSuriOhaengScore(ohaeng: OhaengData): ScoreDetail {
+        val balance = OhaengRelationUtil.calculateBalanceScore(ohaeng.ohaengDistribution) * 0.5
+        val array = OhaengRelationUtil.calculateArrayScore(ohaeng.arrangement) * 0.5
+        val isPassed = PassFailUtil.checkSageokSuriOhaeng(ohaeng.arrangement)
 
         return ScoreDetail(
-            score = totalScore,
-            maxScore = 100,
-            reason = "오행균형(${balanceScore.toInt()}/50), 배열조화(${arrayScore.toInt()}/50)",
-            isPassed = isPassed
+            (balance + array).toInt(), 100,
+            "오행균형(${balance.toInt()}/50), 배열조화(${array.toInt()}/50)",
+            isPassed
         )
     }
 
-    private fun hasAnySangGeuk(arrangement: List<String>): Boolean {
-        for (i in 0 until arrangement.size - 1) {
-
-            if (arrangement[i] == arrangement[i + 1]) {
-                continue
-            }
-            if (OhaengRelationUtil.isSangGeuk(arrangement[i], arrangement[i + 1])) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun calculateSageokSuriEumYangScore(sageokSuriEumYang: SageokSuriEumYang): ScoreDetail {
-        val total = sageokSuriEumYang.eumCount + sageokSuriEumYang.yangCount
+    private fun calculateSageokSuriEumYangScore(eumyang: EumYangData): ScoreDetail {
+        val total = eumyang.eumCount + eumyang.yangCount
         if (total == 0) return ScoreDetail(0, 100, "데이터 없음", false)
 
-        val ratio = minOf(sageokSuriEumYang.eumCount, sageokSuriEumYang.yangCount).toDouble() / total
-        val ratioScore = when {
-            ratio >= 0.4 -> 50
-            ratio >= 0.3 -> 35
-            ratio >= 0.2 -> 20
-            else -> 10
+        val ratio = minOf(eumyang.eumCount, eumyang.yangCount).toDouble() / total
+        val score = when {
+            ratio >= 0.4 -> 100
+            ratio >= 0.3 -> 85
+            ratio >= 0.2 -> 70
+            else -> 60
         }
 
-        val isPassed = ratio >= 0.2
-
-        val totalScore = ratioScore + 50
-
-        return ScoreDetail(
-            score = totalScore,
-            maxScore = 100,
-            reason = "음${sageokSuriEumYang.eumCount}:양${sageokSuriEumYang.yangCount}",
-            isPassed = isPassed
-        )
+        return ScoreDetail(score, 100, "음${eumyang.eumCount}:양${eumyang.yangCount}", ratio >= 0.2)
     }
 
-    private fun calculateHoeksuOhaengScore(hoeksuOhaeng: HoeksuOhaeng, nameInput: NameInput): ScoreDetail {
-        val balanceScore = OhaengRelationUtil.calculateBalanceScore(hoeksuOhaeng.ohaengDistribution) * 0.5
-        val arrayScore = OhaengRelationUtil.calculateArrayScore(hoeksuOhaeng.arrangement) * 0.5
-
-        val surnameLength = if (nameInput.surname.length == 2) 2 else 1
-
-        val isPassed = PassFailUtil.checkOhaengSangSaeng(hoeksuOhaeng.arrangement, surnameLength)
-
-        val totalScore = (balanceScore + arrayScore).toInt()
-
-        return ScoreDetail(
-            score = totalScore,
-            maxScore = 100,
-            reason = "획수오행 균형도: ${balanceScore.toInt()}/50, 배열: ${hoeksuOhaeng.arrangement.joinToString("-")}",
-            isPassed = isPassed
-        )
-    }
-
-    private fun calculateHoeksuEumYangScore(hoeksuEumYang: HoeksuEumYang, nameInput: NameInput): ScoreDetail {
-        val surnameLength = if (nameInput.surname.length == 2) 2 else 1
-
-        return calculateEumYangScoreWithPass(
-            hoeksuEumYang.eumCount,
-            hoeksuEumYang.yangCount,
-            hoeksuEumYang.arrangement,
-            surnameLength,
-            "획수음양"
-        )
-    }
-
-    private fun calculateBaleumOhaengScore(baleumOhaeng: BaleumOhaeng, nameInput: NameInput): ScoreDetail {
-        val balanceScore = OhaengRelationUtil.calculateBalanceScore(baleumOhaeng.ohaengDistribution) * 0.5
-        val arrayScore = OhaengRelationUtil.calculateArrayScore(baleumOhaeng.arrangement) * 0.5
-
-        val surnameLength = if (nameInput.surname.length == 2) 2 else 1
-
-        val isPassed = PassFailUtil.checkOhaengSangSaeng(baleumOhaeng.arrangement, surnameLength)
-
-        val totalScore = (balanceScore + arrayScore).toInt()
-
-        return ScoreDetail(
-            score = totalScore,
-            maxScore = 100,
-            reason = "발음오행 균형도: ${balanceScore.toInt()}/50, 배열: ${baleumOhaeng.arrangement.joinToString("-")}",
-            isPassed = isPassed
-        )
-    }
-
-    private fun calculateBaleumEumYangScore(baleumEumYang: BaleumEumYang, nameInput: NameInput): ScoreDetail {
-        val surnameLength = if (nameInput.surname.length == 2) 2 else 1
-
-        return calculateEumYangScoreWithPass(
-            baleumEumYang.eumCount,
-            baleumEumYang.yangCount,
-            baleumEumYang.arrangement,
-            surnameLength,
-            "발음음양"
-        )
-    }
-
-    private fun calculateSajuNameOhaengScore(
-        sajuOhaeng: SajuOhaeng,
-        sajuNameOhaeng: SajuNameOhaeng,
-        jawonOhaeng: JawonOhaeng
-    ): ScoreDetail {
-
-        val sajuZeroOhaengs = sajuOhaeng.ohaengDistribution.filter { it.value == 0 }.keys
-        val finalZeroOhaengs = sajuNameOhaeng.ohaengDistribution.filter { it.value == 0 }.keys
-
-        val zeroReduction = sajuZeroOhaengs.size - finalZeroOhaengs.size
-
-        val jawonForZero = sajuZeroOhaengs.count { zeroOhaeng ->
-            (jawonOhaeng.ohaengDistribution[zeroOhaeng] ?: 0) > 0
-        }
-
-        val isPassed = when {
-            sajuZeroOhaengs.isEmpty() -> true
-            jawonForZero == 0 -> true
-            else -> zeroReduction == jawonForZero
-        }
-
-        val totalBalanceScore = OhaengRelationUtil.calculateBalanceScore(sajuNameOhaeng.ohaengDistribution)
-        val complementScore = if (sajuZeroOhaengs.isNotEmpty() && jawonForZero > 0) {
-            (zeroReduction.toDouble() / jawonForZero * 50).toInt()
-        } else {
-            30
-        }
-
-        val finalScore = (complementScore + totalBalanceScore * 0.5).toInt().coerceIn(0, 100)
-
-        val reason = buildString {
-            if (sajuZeroOhaengs.isNotEmpty()) {
-                append("0인 오행(${sajuZeroOhaengs.joinToString(",")}) ")
-                append("중 ${zeroReduction}개 보완")
-            } else {
-                append("0인 오행 없음")
-            }
-            append(", 균형도: ${totalBalanceScore}점")
-        }
-
-        return ScoreDetail(
-            score = finalScore,
-            maxScore = 100,
-            reason = reason,
-            isPassed = isPassed
-        )
-    }
-
-    private fun calculateJawonOhaengScore(sajuOhaeng: SajuOhaeng, jawonOhaeng: JawonOhaeng): ScoreDetail {
-
-        val sajuValues = sajuOhaeng.ohaengDistribution.values
-        val sajuAvg = sajuValues.average()
-
-        var score = 70
-        val reasons = mutableListOf<String>()
-        var complementedWeak = 0
-
-        val weakOhaengs = mutableListOf<String>()
-        sajuOhaeng.ohaengDistribution.forEach { (ohaeng, count) ->
-            if (count < sajuAvg) {
-                weakOhaengs.add(ohaeng)
-                val jawonCount = jawonOhaeng.ohaengDistribution[ohaeng] ?: 0
-                if (jawonCount > 0) {
-                    score += 10
-                    complementedWeak++
-                    reasons.add("${ohaeng} 보완")
-                }
-            }
-        }
-
-        val jawonBalance = if (jawonOhaeng.ohaengDistribution.values.sum() > 0) {
-            val distribution = jawonOhaeng.ohaengDistribution.values
-            val max = distribution.maxOrNull() ?: 0
-            val min = distribution.minOrNull() ?: 0
-            if (max - min <= 1) 10 else 0
-        } else 0
-
-        score = (score + jawonBalance).coerceIn(0, 100)
-
-        val isPassed = if (weakOhaengs.isEmpty()) {
-            true
-        } else {
-            complementedWeak >= (weakOhaengs.size + 1) / 2
-        }
-
-        return ScoreDetail(
-            score = score,
-            maxScore = 100,
-            reason = if (reasons.isNotEmpty()) reasons.joinToString(", ") else "자원오행 기본점수",
-            isPassed = isPassed
-        )
-    }
-
-    private fun calculateSajuEumYangScore(sajuEumYang: SajuEumYang): ScoreDetail {
-        val total = sajuEumYang.eumCount + sajuEumYang.yangCount
+    private fun calculateSajuEumYangScore(eumyang: EumYangData): ScoreDetail {
+        val total = eumyang.eumCount + eumyang.yangCount
         if (total == 0) return ScoreDetail(0, 100, "사주 데이터 없음", false)
 
-        val ratio = minOf(sajuEumYang.eumCount, sajuEumYang.yangCount).toDouble() / total
-
+        val ratio = minOf(eumyang.eumCount, eumyang.yangCount).toDouble() / total
         val score = when {
             ratio >= 0.4 -> 100
             ratio >= 0.375 -> 90
@@ -382,29 +291,43 @@ class NameAnalyzer {
             else -> 30
         }
 
-        val isPassed = ratio >= 0.25
-
-        val reason = "사주음양 - 음${sajuEumYang.eumCount}:양${sajuEumYang.yangCount} (${String.format("%.0f", ratio * 100)}:${String.format("%.0f", (1-ratio) * 100)})"
-
         return ScoreDetail(
-            score = score,
-            maxScore = 100,
-            reason = reason,
-            isPassed = isPassed
+            score, 100,
+            "사주음양 - 음${eumyang.eumCount}:양${eumyang.yangCount} " +
+            "(${(ratio * 100).toInt()}:${((1-ratio) * 100).toInt()})",
+            ratio >= 0.25
         )
     }
 
-    private fun calculateEumYangScoreWithPass(
-        eumCount: Int,
-        yangCount: Int,
-        arrangement: List<String>,
-        surnameLength: Int,
-        prefix: String
-    ): ScoreDetail {
-        val total = eumCount + yangCount
+    private fun calculateHoeksuOhaengScore(ohaeng: OhaengData, surnameLength: Int): ScoreDetail {
+        val balance = OhaengRelationUtil.calculateBalanceScore(ohaeng.ohaengDistribution) * 0.5
+        val array = OhaengRelationUtil.calculateArrayScore(ohaeng.arrangement) * 0.5
+        val isPassed = PassFailUtil.checkOhaengSangSaeng(ohaeng.arrangement, surnameLength)
+
+        return ScoreDetail(
+            (balance + array).toInt(), 100,
+            "획수오행 균형도: ${balance.toInt()}/50, 배열: ${ohaeng.arrangement.joinToString("-")}",
+            isPassed
+        )
+    }
+
+    private fun calculateBaleumOhaengScore(ohaeng: OhaengData, surnameLength: Int): ScoreDetail {
+        val balance = OhaengRelationUtil.calculateBalanceScore(ohaeng.ohaengDistribution) * 0.5
+        val array = OhaengRelationUtil.calculateArrayScore(ohaeng.arrangement) * 0.5
+        val isPassed = PassFailUtil.checkOhaengSangSaeng(ohaeng.arrangement, surnameLength)
+
+        return ScoreDetail(
+            (balance + array).toInt(), 100,
+            "발음오행 균형도: ${balance.toInt()}/50, 배열: ${ohaeng.arrangement.joinToString("-")}",
+            isPassed
+        )
+    }
+
+    private fun calculateEumYangScore(eumyang: EumYangData, surnameLength: Int, prefix: String): ScoreDetail {
+        val total = eumyang.eumCount + eumyang.yangCount
         if (total == 0) return ScoreDetail(0, 100, "$prefix 데이터 없음", false)
 
-        val ratio = minOf(eumCount, yangCount).toDouble() / total
+        val ratio = minOf(eumyang.eumCount, eumyang.yangCount).toDouble() / total
         val ratioScore = when {
             ratio >= 0.4 -> 50
             ratio >= 0.3 -> 35
@@ -412,17 +335,77 @@ class NameAnalyzer {
             else -> 10
         }
 
-        val isPassed = PassFailUtil.checkEumYangHarmony(arrangement, surnameLength)
-
-        var arrayScore = 40
-
-        val totalScore = (ratioScore + arrayScore).coerceIn(0, 100)
+        val isPassed = PassFailUtil.checkEumYangHarmony(eumyang.arrangement, surnameLength)
+        val totalScore = (ratioScore + 40).coerceIn(0, 100)
 
         return ScoreDetail(
-            score = totalScore,
-            maxScore = 100,
-            reason = "$prefix - 음$eumCount:양$yangCount, 배열: ${arrangement.joinToString("")}",
-            isPassed = isPassed
+            totalScore, 100,
+            "$prefix - 음${eumyang.eumCount}:양${eumyang.yangCount}, 배열: ${eumyang.arrangement.joinToString("")}",
+            isPassed
         )
+    }
+
+    private fun calculateSajuNameOhaengScore(sajuOhaeng: OhaengData, sajuNameOhaeng: OhaengData, jawonOhaeng: OhaengData): ScoreDetail {
+        val sajuZero = sajuOhaeng.ohaengDistribution.filter { it.value == 0 }.keys
+        val finalZero = sajuNameOhaeng.ohaengDistribution.filter { it.value == 0 }.keys
+        val zeroReduction = sajuZero.size - finalZero.size
+        val jawonForZero = sajuZero.count { (jawonOhaeng.ohaengDistribution[it] ?: 0) > 0 }
+
+        val isPassed = sajuZero.isEmpty() || jawonForZero == 0 || zeroReduction == jawonForZero
+        val balance = OhaengRelationUtil.calculateBalanceScore(sajuNameOhaeng.ohaengDistribution)
+        val complementScore = if (sajuZero.isNotEmpty() && jawonForZero > 0) {
+            (zeroReduction.toDouble() / jawonForZero * 50).toInt()
+        } else 30
+
+        val score = (complementScore + balance * 0.5).toInt().coerceIn(0, 100)
+        val reason = if (sajuZero.isNotEmpty()) {
+            "0인 오행(${sajuZero.joinToString(",")}) 중 ${zeroReduction}개 보완, 균형도: ${balance}점"
+        } else "0인 오행 없음, 균형도: ${balance}점"
+
+        return ScoreDetail(score, 100, reason, isPassed)
+    }
+
+    private fun calculateJawonOhaengScore(sajuOhaeng: OhaengData, jawonOhaeng: OhaengData): ScoreDetail {
+        val sajuAvg = sajuOhaeng.ohaengDistribution.values.average()
+        var score = 70
+        val reasons = mutableListOf<String>()
+
+        val weakOhaengs = sajuOhaeng.ohaengDistribution.filter { it.value < sajuAvg }.keys
+        val complemented = weakOhaengs.count { (jawonOhaeng.ohaengDistribution[it] ?: 0) > 0 }
+
+        score += complemented * 10
+        if (complemented > 0) reasons.add("${weakOhaengs.joinToString(", ")} 보완")
+
+        val jawonBalance = if (jawonOhaeng.ohaengDistribution.values.sum() > 0) {
+            val max = jawonOhaeng.ohaengDistribution.values.maxOrNull() ?: 0
+            val min = jawonOhaeng.ohaengDistribution.values.minOrNull() ?: 0
+            if (max - min <= 1) 10 else 0
+        } else 0
+
+        score = (score + jawonBalance).coerceIn(0, 100)
+        val isPassed = weakOhaengs.isEmpty() || complemented >= (weakOhaengs.size + 1) / 2
+
+        return ScoreDetail(
+            score, 100,
+            if (reasons.isNotEmpty()) reasons.joinToString(", ") else "자원오행 기본점수",
+            isPassed
+        )
+    }
+
+    private fun calculateWeightedTotalScore(scores: DetailedScores): Int {
+        val weights = mapOf(
+            "sageokSuri" to 0.20, "sajuNameOhaeng" to 0.20,
+            "hoeksuEumYang" to 0.15, "baleumOhaeng" to 0.15,
+            "baleumEumYang" to 0.15, "sageokSuriOhaeng" to 0.15
+        )
+
+        val weighted = scores.sageokSuriScore.score * weights["sageokSuri"]!! +
+                      scores.sajuNameOhaengScore.score * weights["sajuNameOhaeng"]!! +
+                      scores.hoeksuEumYangScore.score * weights["hoeksuEumYang"]!! +
+                      scores.baleumOhaengScore.score * weights["baleumOhaeng"]!! +
+                      scores.baleumEumYangScore.score * weights["baleumEumYang"]!! +
+                      scores.sageokSuriOhaengScore.score * weights["sageokSuriOhaeng"]!!
+
+        return weighted.toInt().coerceIn(0, 100)
     }
 }

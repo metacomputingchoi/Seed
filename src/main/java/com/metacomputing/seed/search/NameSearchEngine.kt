@@ -1,14 +1,14 @@
 // search/NameSearchEngine.kt
 package com.metacomputing.seed.search
 
-import com.metacomputing.seed.model.NameBlock
-import com.metacomputing.seed.model.NameQuery
+import com.metacomputing.seed.model.*
 import com.metacomputing.seed.database.HanjaDatabase
 import com.metacomputing.seed.statistics.NameStatisticsLoader
+import com.metacomputing.seed.*
 
 class NameSearchEngine(
     private val hanjaDB: HanjaDatabase,
-    private val statsLoader: NameStatisticsLoader = NameStatisticsLoader()
+    private val statsLoader: NameStatisticsLoader
 ) {
 
     private val allValidNameCombinations: Set<NameCombination> by lazy {
@@ -16,7 +16,6 @@ class NameSearchEngine(
         val stats = statsLoader.loadStatistics()
 
         stats.forEach { (givenName, nameStats) ->
-
             if (nameStats.hanjaCombinations.isNotEmpty()) {
                 nameStats.hanjaCombinations.forEach { hanja ->
                     if (hanja.length == givenName.length) {
@@ -24,7 +23,6 @@ class NameSearchEngine(
                     }
                 }
             }
-
         }
 
         combinations
@@ -67,7 +65,6 @@ class NameSearchEngine(
     }
 
     private fun matchesNameQuery(combination: NameCombination, blocks: List<NameBlock>): Boolean {
-
         if (combination.korean.length != blocks.size) return false
 
         return blocks.indices.all { index ->
@@ -84,8 +81,8 @@ class NameSearchEngine(
         return when {
             block.isKoreanEmpty -> true
             block.isCompleteKorean -> korean == block.korean
-            block.isChosungOnly -> extractChosung(korean) == block.korean
-            block.isJungsungOnly -> extractJungsung(korean) == block.korean
+            block.isChosungOnly -> korean.firstOrNull()?.extractChosung() == block.korean
+            block.isJungsungOnly -> korean.firstOrNull()?.extractJungsung() == block.korean
             else -> false
         }
     }
@@ -101,7 +98,6 @@ class NameSearchEngine(
     }
 
     private fun findSingleSurnameCandidates(block: NameBlock): List<SurnameCandidate> {
-
         if (block.isKoreanEmpty || block.isHanjaEmpty) {
             return emptyList()
         }
@@ -119,7 +115,6 @@ class NameSearchEngine(
         firstBlock: NameBlock,
         secondBlock: NameBlock
     ): List<SurnameCandidate> {
-
         if (firstBlock.isKoreanEmpty || firstBlock.isHanjaEmpty ||
             secondBlock.isKoreanEmpty || secondBlock.isHanjaEmpty) {
             return emptyList()
@@ -141,59 +136,9 @@ class NameSearchEngine(
             emptyList()
         }
     }
-
-    private fun matchesBlock(korean: String, hanja: String, block: NameBlock): Boolean {
-        val koreanMatches = when {
-            block.isKoreanEmpty -> true
-            block.isCompleteKorean -> korean == block.korean
-            block.isChosungOnly -> extractChosung(korean) == block.korean
-            block.isJungsungOnly -> extractJungsung(korean) == block.korean
-            else -> false
-        }
-
-        val hanjaMatches = when {
-            block.isHanjaEmpty -> true
-            else -> hanja == block.hanja
-        }
-
-        return koreanMatches && hanjaMatches
-    }
-
-    private fun extractChosung(char: String): String {
-        if (char.isEmpty() || char[0] !in '가'..'힣') return ""
-
-        val code = char[0].code - 0xAC00
-        val chosungIndex = code / (21 * 28)
-
-        val chosungList = listOf(
-            "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ",
-            "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"
-        )
-
-        return if (chosungIndex in chosungList.indices) chosungList[chosungIndex] else ""
-    }
-
-    private fun extractJungsung(char: String): String {
-        if (char.isEmpty() || char[0] !in '가'..'힣') return ""
-
-        val code = char[0].code - 0xAC00
-        val jungsungIndex = (code % (21 * 28)) / 28
-
-        val jungsungList = listOf(
-            "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ",
-            "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ"
-        )
-
-        return if (jungsungIndex in jungsungList.indices) jungsungList[jungsungIndex] else ""
-    }
 }
 
 data class NameCombination(
-    val korean: String,
-    val hanja: String
-)
-
-data class CharCandidate(
     val korean: String,
     val hanja: String
 )
@@ -202,13 +147,3 @@ data class SurnameCandidate(
     val korean: String,
     val hanja: String
 )
-
-data class SearchResult(
-    val surname: String,
-    val surnameHanja: String,
-    val givenName: String,
-    val givenNameHanja: String
-) {
-    val fullName: String = surname + givenName
-    val fullNameHanja: String = surnameHanja + givenNameHanja
-}

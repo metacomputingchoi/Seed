@@ -1,5 +1,6 @@
 // Main.kt
 package com.metacomputing.seed
+import com.metacomputing.seed.util.OhaengRelationUtil
 
 fun main() {
     val birthInfo = BirthInfo(
@@ -124,7 +125,7 @@ fun printNameDetails(result: NameEvaluationResult) {
     println("    └─ 발음오행: ${details.baleumOhaeng.arrangement.joinToString("-")}")
 
     val relations = details.hoeksuOhaeng.arrangement.zipWithNext()
-        .map { (first, second) -> getDetailedRelation(first, second) }
+        .map { (first, second) -> OhaengRelationUtil.getDetailedRelation(first, second) }
     if (relations.isNotEmpty()) {
         println("       └─ 관계: ${relations.joinToString(" → ")}")
     }
@@ -155,40 +156,7 @@ fun parseCompleteQuery(query: String): ParsedName? {
     return ParsedName(surname, surnameHanja, givenName, givenNameHanja)
 }
 
-fun getDetailedRelation(first: String, second: String): String {
-    val ohaengToNumber = mapOf(
-        "목" to 0, "화" to 1, "토" to 2, "금" to 3, "수" to 4
-    )
-
-    fun isSangSaeng(a: String, b: String): Boolean {
-        val aNum = ohaengToNumber[a] ?: return false
-        val bNum = ohaengToNumber[b] ?: return false
-        return (aNum + 1) % 5 == bNum
-    }
-
-    fun isNormalGeuk(a: String, b: String): Boolean {
-        val aNum = ohaengToNumber[a] ?: return false
-        val bNum = ohaengToNumber[b] ?: return false
-        return (aNum + 2) % 5 == bNum
-    }
-
-    fun isReverseGeuk(a: String, b: String): Boolean {
-        val aNum = ohaengToNumber[a] ?: return false
-        val bNum = ohaengToNumber[b] ?: return false
-        return (bNum + 2) % 5 == aNum
-    }
-
-    return when {
-        first == second -> "동일"
-        isSangSaeng(first, second) -> "상생"
-        isNormalGeuk(first, second) -> "정상극(${first}극$second)"
-        isReverseGeuk(first, second) -> "역상극(${second}극$first)"
-        else -> "중립"
-    }
-}
-
 // Data classes
-
 data class BirthInfo(
     val year: Int,
     val month: Int,

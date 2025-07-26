@@ -20,9 +20,7 @@ class NameStatisticsAnalyzer {
         }
 
         val bestEntry = allRanks.minByOrNull { it.value }!!
-
         val recentEntry = allRanks.maxByOrNull { it.key }!!
-
         val trend = analyzeTrend(allRanks)
 
         return PopularityAnalysis(

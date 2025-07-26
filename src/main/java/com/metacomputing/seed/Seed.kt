@@ -9,23 +9,11 @@ import com.metacomputing.seed.database.HanjaDetailedInfo
 import com.metacomputing.seed.model.*
 import com.metacomputing.seed.search.NameQueryParser
 import com.metacomputing.seed.search.NameSearchEngine
-import com.metacomputing.seed.statistics.NameStatisticsAnalyzer
 import com.metacomputing.seed.statistics.NameStatisticsLoader
+import com.metacomputing.seed.statistics.NameStatisticsAnalyzer
 
 /**
  * 작명 분석 엔진 SDK
- *
- * 사용 예시:
- * ```
- * // 이름 평가
- * val result = Seed.evaluateName("최", "崔", "성수", "成秀", 1986, 4, 19, 5, 45)
- *
- * // 이름 검색
- * val searchResults = Seed.searchNames("[최/崔][_/_][_/_]", 1986, 4, 19, 5, 45)
- *
- * // 통계 분석
- * val stats = Seed.getNameStatistics("성수")
- * ```
  */
 object Seed {
 
@@ -36,18 +24,6 @@ object Seed {
 
     /**
      * 특정 이름을 평가합니다.
-     *
-     * @param surname 성씨 (예: "최")
-     * @param surnameHanja 성씨 한자 (예: "崔")
-     * @param givenName 이름 (예: "성수")
-     * @param givenNameHanja 이름 한자 (예: "成秀")
-     * @param year 출생년도
-     * @param month 출생월
-     * @param day 출생일
-     * @param hour 출생시
-     * @param minute 출생분
-     * @param timezone 시간대 (기본값: -540 for KST)
-     * @return 이름 평가 결과
      */
     fun evaluateName(
         surname: String,
@@ -77,16 +53,6 @@ object Seed {
 
     /**
      * 이름 패턴으로 검색하고 평가합니다.
-     *
-     * @param query 검색 쿼리 (예: "[최/崔][성/成][수/秀]" 또는 "[최/崔][_/_][_/_]")
-     * @param year 출생년도
-     * @param month 출생월
-     * @param day 출생일
-     * @param hour 출생시
-     * @param minute 출생분
-     * @param timezone 시간대 (기본값: -540 for KST)
-     * @param limit 최대 결과 수 (기본값: 10000000)
-     * @return 검색 및 평가 결과 목록
      */
     fun searchNames(
         query: String,
@@ -134,9 +100,6 @@ object Seed {
 
     /**
      * 이름에 대한 통계 정보를 가져옵니다.
-     *
-     * @param givenName 이름 (예: "성수")
-     * @return 통계 분석 결과 (없으면 null)
      */
     fun getNameStatistics(givenName: String): NameStatisticsResult? {
         val stats = statsLoader.loadStatistics()[givenName] ?: return null
@@ -152,13 +115,9 @@ object Seed {
 
     /**
      * 한자 정보를 조회합니다.
-     *
-     * @param korean 한글 (예: "성")
-     * @param hanja 한자 (예: "成")
-     * @return 한자 상세 정보 (없으면 null)
      */
     fun getHanjaInfo(korean: String, hanja: String): HanjaDetailedInfo? {
-        return hanjaDB.getHanjaInfo(korean, hanja)
+        return hanjaDB.getHanjaInfo(korean, hanja, false)
     }
 
     // Private helper functions

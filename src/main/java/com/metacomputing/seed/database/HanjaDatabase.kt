@@ -3,6 +3,7 @@ package com.metacomputing.seed.database
 
 import com.metacomputing.seed.model.HanjaInfo
 import com.metacomputing.seed.util.BaleumAnalyzer
+import com.metacomputing.seed.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.ListSerializer
@@ -17,11 +18,11 @@ class HanjaDatabase {
     }
 
     var hanjaDict: Map<String, HanjaInfo> = emptyMap()
+        private set
     private var koreanToHanjaMapping: Map<String, List<String>> = emptyMap()
     private var hanjaToKeysMapping: Map<String, List<String>> = emptyMap()
     private var chosungToKoreanMapping: Map<String, List<String>> = emptyMap()
     private var jungsungToKoreanMapping: Map<String, List<String>> = emptyMap()
-
     private var surnamePairMapping: Map<String, List<String>> = emptyMap()
 
     init {
@@ -41,61 +42,17 @@ class HanjaDatabase {
         }
     }
 
-    private fun loadSurnamePairMapping() {
-        val resourcePath = "resources/seed/data/surname_hanja_pair_mapping_dict.json"
-        val file = File(resourcePath)
-
-        surnamePairMapping = if (file.exists()) {
-            val jsonString = file.readText()
-            json.decodeFromString(
-                MapSerializer(String.serializer(), ListSerializer(String.serializer())),
-                jsonString
-            )
-        } else {
-            val resourceStream = this::class.java.classLoader.getResourceAsStream(
-                "seed/data/surname_hanja_pair_mapping_dict.json"
-            )
-            resourceStream?.use { stream ->
-                val jsonString = stream.bufferedReader().use { it.readText() }
-                json.decodeFromString(
-                    MapSerializer(String.serializer(), ListSerializer(String.serializer())),
-                    jsonString
-                )
-            } ?: emptyMap()
-        }
-    }
-
     private fun loadHanjaDict() {
-        val resourcePath = "resources/seed/data/name_char_hanja_dict_effective.json"
-        val file = File(resourcePath)
+        val rawDict: Map<String, HanjaInfo> = loadJsonData("name_char_hanja_dict_effective.json")
 
-        val rawHanjaDict = if (file.exists()) {
-            val jsonString = file.readText()
-            json.decodeFromString(
-                MapSerializer(String.serializer(), HanjaInfo.serializer()),
-                jsonString
-            )
-        } else {
-            val resourceStream = this::class.java.classLoader.getResourceAsStream(
-                "seed/data/name_char_hanja_dict_effective.json"
-            )
-            resourceStream?.use { stream ->
-                val jsonString = stream.bufferedReader().use { it.readText() }
-                json.decodeFromString(
-                    MapSerializer(String.serializer(), HanjaInfo.serializer()),
-                    jsonString
-                )
-            } ?: emptyMap()
-        }
-
-        hanjaDict = rawHanjaDict.mapKeys { (key, _) ->
+        // 원본과 동일하게 정규화 처리
+        hanjaDict = rawDict.mapKeys { (key, _) ->
             Normalizer.normalize(key, Normalizer.Form.NFC)
         }.mapValues { (_, value) ->
             value.copy(
                 charKo = Normalizer.normalize(value.charKo, Normalizer.Form.NFC),
                 hanja = Normalizer.normalize(value.hanja, Normalizer.Form.NFC),
                 meaning = Normalizer.normalize(value.meaning, Normalizer.Form.NFC),
-                strokes = value.strokes,
                 strokeElement = Normalizer.normalize(value.strokeElement, Normalizer.Form.NFC),
                 radical = Normalizer.normalize(value.radical, Normalizer.Form.NFC),
                 sourceElement = Normalizer.normalize(value.sourceElement, Normalizer.Form.NFC)
@@ -104,133 +61,49 @@ class HanjaDatabase {
     }
 
     private fun loadKoreanToHanjaMapping() {
-        val resourcePath = "resources/seed/data/name_korean_to_hanja_dict_keys_mapping_effective.json"
-        val file = File(resourcePath)
-
-        koreanToHanjaMapping = if (file.exists()) {
-            val jsonString = file.readText()
-            json.decodeFromString(
-                MapSerializer(String.serializer(), ListSerializer(String.serializer())),
-                jsonString
-            )
-        } else {
-            val resourceStream = this::class.java.classLoader.getResourceAsStream(
-                "seed/data/name_korean_to_hanja_dict_keys_mapping_effective.json"
-            )
-            resourceStream?.use { stream ->
-                val jsonString = stream.bufferedReader().use { it.readText() }
-                json.decodeFromString(
-                    MapSerializer(String.serializer(), ListSerializer(String.serializer())),
-                    jsonString
-                )
-            } ?: emptyMap()
-        }
+        koreanToHanjaMapping = loadJsonData("name_korean_to_hanja_dict_keys_mapping_effective.json")
     }
 
     private fun loadHanjaToKeysMapping() {
-        val resourcePath = "resources/seed/data/name_hanja_to_hanja_dict_keys_mapping_effective.json"
-        val file = File(resourcePath)
-
-        hanjaToKeysMapping = if (file.exists()) {
-            val jsonString = file.readText()
-            json.decodeFromString(
-                MapSerializer(String.serializer(), ListSerializer(String.serializer())),
-                jsonString
-            )
-        } else {
-            val resourceStream = this::class.java.classLoader.getResourceAsStream(
-                "seed/data/name_hanja_to_hanja_dict_keys_mapping_effective.json"
-            )
-            resourceStream?.use { stream ->
-                val jsonString = stream.bufferedReader().use { it.readText() }
-                json.decodeFromString(
-                    MapSerializer(String.serializer(), ListSerializer(String.serializer())),
-                    jsonString
-                )
-            } ?: emptyMap()
-        }
+        hanjaToKeysMapping = loadJsonData("name_hanja_to_hanja_dict_keys_mapping_effective.json")
     }
 
     private fun loadChosungToKoreanMapping() {
-        val resourcePath = "resources/seed/data/name_chosung_to_korean_mapping_effective.json"
-        val file = File(resourcePath)
-
-        chosungToKoreanMapping = if (file.exists()) {
-            val jsonString = file.readText()
-            json.decodeFromString(
-                MapSerializer(String.serializer(), ListSerializer(String.serializer())),
-                jsonString
-            )
-        } else {
-            val resourceStream = this::class.java.classLoader.getResourceAsStream(
-                "seed/data/name_chosung_to_korean_mapping_effective.json"
-            )
-            resourceStream?.use { stream ->
-                val jsonString = stream.bufferedReader().use { it.readText() }
-                json.decodeFromString(
-                    MapSerializer(String.serializer(), ListSerializer(String.serializer())),
-                    jsonString
-                )
-            } ?: emptyMap()
-        }
+        chosungToKoreanMapping = loadJsonData("name_chosung_to_korean_mapping_effective.json")
     }
 
     private fun loadJungsungToKoreanMapping() {
-        val resourcePath = "resources/seed/data/name_jungsung_to_korean_mapping_effective.json"
+        jungsungToKoreanMapping = loadJsonData("name_jungsung_to_korean_mapping_effective.json")
+    }
+
+    private fun loadSurnamePairMapping() {
+        surnamePairMapping = loadJsonData("surname_hanja_pair_mapping_dict.json")
+    }
+
+    private inline fun <reified T> loadJsonData(fileName: String): T {
+        val resourcePath = "resources/seed/data/$fileName"
         val file = File(resourcePath)
 
-        jungsungToKoreanMapping = if (file.exists()) {
-            val jsonString = file.readText()
-            json.decodeFromString(
-                MapSerializer(String.serializer(), ListSerializer(String.serializer())),
-                jsonString
-            )
+        val jsonString = if (file.exists()) {
+            file.readText()
         } else {
-            val resourceStream = this::class.java.classLoader.getResourceAsStream(
-                "seed/data/name_jungsung_to_korean_mapping_effective.json"
-            )
-            resourceStream?.use { stream ->
-                val jsonString = stream.bufferedReader().use { it.readText() }
-                json.decodeFromString(
-                    MapSerializer(String.serializer(), ListSerializer(String.serializer())),
-                    jsonString
-                )
-            } ?: emptyMap()
+            this::class.java.classLoader.getResourceAsStream("seed/data/$fileName")
+                ?.bufferedReader()?.use { it.readText() }
+                ?: when (T::class) {
+                    Map::class -> return emptyMap<String, Any>() as T
+                    else -> throw Exception("리소스를 찾을 수 없음: $fileName")
+                }
         }
+
+        return json.decodeFromString(jsonString)
     }
 
-    fun getAllSurnames(): List<String> {
-        return surnamePairMapping.keys.toList()
-    }
-
-    fun getAllNameHanja(): List<String> {
-        return hanjaDict.keys.toList()
-    }
-
-    fun isSurname(key: String): Boolean {
-        return surnamePairMapping.containsKey(key)
-    }
-
-    fun getDoubleSurnameParts(surname: String, surnameHanja: String): List<String>? {
-        val key = "$surname/$surnameHanja"
-        return surnamePairMapping[key]
-    }
-
-    fun getHanjaListByKorean(korean: String): List<String> {
-        return koreanToHanjaMapping[korean] ?: emptyList()
-    }
-
-    fun getReadingsByHanja(hanja: String): List<String> {
-        return hanjaToKeysMapping[hanja] ?: emptyList()
-    }
-
-    fun getKoreanListByChosung(chosung: String): List<String> {
-        return chosungToKoreanMapping[chosung] ?: emptyList()
-    }
-
-    fun getKoreanListByJungsung(jungsung: String): List<String> {
-        return jungsungToKoreanMapping[jungsung] ?: emptyList()
-    }
+    fun getAllSurnames(): List<String> = surnamePairMapping.keys.toList()
+    fun getHanjaListByKorean(korean: String): List<String> = koreanToHanjaMapping[korean] ?: emptyList()
+    fun getReadingsByHanja(hanja: String): List<String> = hanjaToKeysMapping[hanja] ?: emptyList()
+    fun getKoreanListByChosung(chosung: String): List<String> = chosungToKoreanMapping[chosung] ?: emptyList()
+    fun getKoreanListByJungsung(jungsung: String): List<String> = jungsungToKoreanMapping[jungsung] ?: emptyList()
+    fun isSurname(key: String): Boolean = surnamePairMapping.containsKey(key)
 
     fun isMultiReading(hanja: String): Boolean {
         val readings = hanjaToKeysMapping[hanja] ?: emptyList()
@@ -268,16 +141,18 @@ class HanjaDatabase {
     }
 
     fun getSurnamePairs(surname: String, surnameHanja: String): List<String> {
-        if (surname.length > 1) {
-            val pairs = mutableListOf<String>()
-            surname.forEachIndexed { index, char ->
-                val hanjaChar = surnameHanja.getOrNull(index)?.toString() ?: ""
-                pairs.add("$char/$hanjaChar")
+        return if (surname.length > 1) {
+            surname.indices.map { i ->
+                "${surname[i]}/${surnameHanja.getOrNull(i) ?: ""}"
             }
-            return pairs
+        } else {
+            listOf("$surname/$surnameHanja")
         }
+    }
 
-        return listOf("$surname/$surnameHanja")
+    fun getDoubleSurnameParts(surname: String, surnameHanja: String): List<String>? {
+        val key = "$surname/$surnameHanja"
+        return surnamePairMapping[key]
     }
 
     private fun getEstimatedStrokes(hanja: String): Int {

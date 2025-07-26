@@ -1,86 +1,53 @@
 // util/OhaengRelationUtil.kt
 package com.metacomputing.seed.util
 
+import com.metacomputing.seed.Constants
+
 object OhaengRelationUtil {
-
-    private val ohaengToNumber = mapOf(
-        "목" to 0, "화" to 1, "토" to 2, "금" to 3, "수" to 4
-    )
-
-    private val numberToOhaeng = mapOf(
-        0 to "목", 1 to "화", 2 to "토", 3 to "금", 4 to "수"
-    )
-
     fun isSangSaeng(first: String, second: String): Boolean {
-        val firstNum = ohaengToNumber[first] ?: return false
-        val secondNum = ohaengToNumber[second] ?: return false
+        val firstNum = Constants.OHAENG_MAP[first] ?: return false
+        val secondNum = Constants.OHAENG_MAP[second] ?: return false
         return (firstNum + 1) % 5 == secondNum
     }
 
     fun isSangGeuk(first: String, second: String): Boolean {
-        val firstNum = ohaengToNumber[first] ?: return false
-        val secondNum = ohaengToNumber[second] ?: return false
-
-        val isNormalGeuk = (firstNum + 2) % 5 == secondNum
-
-        val isReverseGeuk = (secondNum + 2) % 5 == firstNum
-
-        return isNormalGeuk || isReverseGeuk
+        val firstNum = Constants.OHAENG_MAP[first] ?: return false
+        val secondNum = Constants.OHAENG_MAP[second] ?: return false
+        return ((firstNum + 2) % 5 == secondNum) || ((secondNum + 2) % 5 == firstNum)
     }
 
-    fun isNormalGeuk(first: String, second: String): Boolean {
-        val firstNum = ohaengToNumber[first] ?: return false
-        val secondNum = ohaengToNumber[second] ?: return false
-        return (firstNum + 2) % 5 == secondNum
-    }
-
-    fun isReverseGeuk(first: String, second: String): Boolean {
-        val firstNum = ohaengToNumber[first] ?: return false
-        val secondNum = ohaengToNumber[second] ?: return false
-        return (secondNum + 2) % 5 == firstNum
-    }
-
-    fun getDetailedRelation(first: String, second: String): String {
-        return when {
-            first == second -> "동일"
-            isSangSaeng(first, second) -> "상생"
-            isNormalGeuk(first, second) -> "정상극(${first}극${second})"
-            isReverseGeuk(first, second) -> "역상극(${second}극${first})"
-            else -> "중립"
-        }
+    fun getDetailedRelation(first: String, second: String) = when {
+        first == second -> "동일"
+        isSangSaeng(first, second) -> "상생"
+        (Constants.OHAENG_MAP[first]!! + 2) % 5 == Constants.OHAENG_MAP[second] -> "정상극(${first}극$second)"
+        (Constants.OHAENG_MAP[second]!! + 2) % 5 == Constants.OHAENG_MAP[first] -> "역상극(${second}극$first)"
+        else -> "중립"
     }
 
     fun calculateArrayScore(arrangement: List<String>): Int {
         if (arrangement.size < 2) return 100
 
-        var sangSaengCount = 0
-        var sangGeukCount = 0
-        var sameCount = 0
+        var sangSaeng = 0
+        var sangGeuk = 0
+        var same = 0
 
-        for (i in 0 until arrangement.size - 1) {
+        arrangement.zipWithNext().forEach { (a, b) ->
             when {
-                isSangSaeng(arrangement[i], arrangement[i + 1]) -> sangSaengCount++
-                isSangGeuk(arrangement[i], arrangement[i + 1]) -> sangGeukCount++
-                arrangement[i] == arrangement[i + 1] -> sameCount++
+                isSangSaeng(a, b) -> sangSaeng++
+                isSangGeuk(a, b) -> sangGeuk++
+                a == b -> same++
             }
         }
 
-        val baseScore = 70
-        val score = baseScore + (sangSaengCount * 15) - (sangGeukCount * 20) - (sameCount * 5)
-        return score.coerceIn(0, 100)
+        return (70 + sangSaeng * 15 - sangGeuk * 20 - same * 5).coerceIn(0, 100)
     }
 
     fun calculateBalanceScore(distribution: Map<String, Int>): Int {
-        val values = distribution.values
-        val total = values.sum()
+        val total = distribution.values.sum()
         if (total == 0) return 0
 
-        val avg = total.toDouble() / 5
-        var deviation = 0.0
-
-        distribution.forEach { (ohaeng, count) ->
-            deviation += Math.abs(count - avg)
-        }
+        val avg = total / 5.0
+        val deviation = distribution.values.sumOf { kotlin.math.abs(it - avg) }
 
         return when {
             deviation <= 2 -> 100
