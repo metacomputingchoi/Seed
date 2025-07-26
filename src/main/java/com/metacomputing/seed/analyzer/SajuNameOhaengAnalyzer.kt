@@ -1,18 +1,18 @@
-// SajuNameOhengAnalyzer.kt
+// SajuNameOhaengAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
 import com.metacomputing.seed.database.HanjaDatabase
 
-class SajuNameOhengAnalyzer {
+class SajuNameOhaengAnalyzer {
     private val hanjaDB = HanjaDatabase()
 
-    fun analyze(sajuOheng: SajuOheng, hoeksuOheng: HoeksuOheng, nameInput: NameInput): SajuNameOheng {
-        val combinedOheng = mutableMapOf<String, Int>()
+    fun analyze(sajuOhaeng: SajuOhaeng, hoeksuOhaeng: HoeksuOhaeng, nameInput: NameInput): SajuNameOhaeng {
+        val combinedOhaeng = mutableMapOf<String, Int>()
 
         // 사주 오행 복사
-        sajuOheng.ohengDistribution.forEach { (key, value) ->
-            combinedOheng[key] = value
+        sajuOhaeng.ohaengDistribution.forEach { (key, value) ->
+            combinedOhaeng[key] = value
         }
 
         // 성씨를 제외한 이름의 획수 오행만 추가
@@ -23,8 +23,8 @@ class SajuNameOhengAnalyzer {
         nameInput.givenName.forEachIndexed { index, char ->
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
-            val oheng = hanjaInfo?.integratedInfo?.resourceOheng ?: "土"
-            val key = when(oheng) {
+            val ohaeng = hanjaInfo?.sourceElement?: "土"
+            val key = when(ohaeng) {
                 "木" -> "목(木)"
                 "火" -> "화(火)"
                 "土" -> "토(土)"
@@ -32,9 +32,9 @@ class SajuNameOhengAnalyzer {
                 "水" -> "수(水)"
                 else -> "토(土)"
             }
-            combinedOheng[key] = (combinedOheng[key] ?: 0) + 1
+            combinedOhaeng[key] = (combinedOhaeng[key] ?: 0) + 1
         }
 
-        return SajuNameOheng(ohengDistribution = combinedOheng)
+        return SajuNameOhaeng(ohaengDistribution = combinedOhaeng)
     }
 }

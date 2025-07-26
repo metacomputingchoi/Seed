@@ -5,15 +5,17 @@ import com.metacomputing.seed.model.*
 class NameAnalyzer {
     private val sajuAnalyzer = SajuAnalyzer()
     private val sageokSuriAnalyzer = SageokSuriAnalyzer()
-    private val sageokSuriOhengAnalyzer = SageokSuriOhengAnalyzer()
+    private val sageokSuriOhaengAnalyzer = SageokSuriOhaengAnalyzer()
     private val sageokSuriEumYangAnalyzer = SageokSuriEumYangAnalyzer()
-    private val sajuOhengAnalyzer = SajuOhengAnalyzer()
+    private val sajuOhaengAnalyzer = SajuOhaengAnalyzer()
     private val sajuEumYangAnalyzer = SajuEumYangAnalyzer()
-    private val hoeksuOhengAnalyzer = HoeksuOhengAnalyzer()
+    private val hoeksuOhaengAnalyzer = HoeksuOhaengAnalyzer()
     private val hoeksuEumYangAnalyzer = HoeksuEumYangAnalyzer()
-    private val baleumOhengAnalyzer = BaleumOhengAnalyzer()
+    private val baleumOhaengAnalyzer = BaleumOhaengAnalyzer()
     private val baleumEumYangAnalyzer = BaleumEumYangAnalyzer()
-    private val sajuNameOhengAnalyzer = SajuNameOhengAnalyzer()
+    private val sajuNameOhaengAnalyzer = SajuNameOhaengAnalyzer()
+
+    private val jawonOhaengAnalyzer = JawonOhaengAnalyzer()
 
     fun analyze(nameInput: NameInput): NameEvaluation {
         // 사주 정보 추출 (이미 NameInput에 포함됨)
@@ -21,49 +23,52 @@ class NameAnalyzer {
 
         // 각 분석 수행
         val sageokSuri = sageokSuriAnalyzer.analyze(nameInput)
-        val sageokSuriOheng = sageokSuriOhengAnalyzer.analyze(sageokSuri)
+        val sageokSuriOhaeng = sageokSuriOhaengAnalyzer.analyze(sageokSuri)
         val sageokSuriEumYang = sageokSuriEumYangAnalyzer.analyze(sageokSuri)
-        val sajuOheng = sajuOhengAnalyzer.analyze(sajuInfo)
+        val sajuOhaeng = sajuOhaengAnalyzer.analyze(sajuInfo)
         val sajuEumYang = sajuEumYangAnalyzer.analyze(sajuInfo)
-        val hoeksuOheng = hoeksuOhengAnalyzer.analyze(nameInput)
+        val hoeksuOhaeng = hoeksuOhaengAnalyzer.analyze(nameInput)
         val hoeksuEumYang = hoeksuEumYangAnalyzer.analyze(nameInput)
-        val baleumOheng = baleumOhengAnalyzer.analyze(nameInput)
+        val baleumOhaeng = baleumOhaengAnalyzer.analyze(nameInput)
         val baleumEumYang = baleumEumYangAnalyzer.analyze(nameInput)
-        val sajuNameOheng = sajuNameOhengAnalyzer.analyze(sajuOheng, hoeksuOheng, nameInput)
+        val sajuNameOhaeng = sajuNameOhaengAnalyzer.analyze(sajuOhaeng, hoeksuOhaeng, nameInput)
+        val jawonOhaeng = jawonOhaengAnalyzer.analyze(nameInput)
 
         // 종합 점수 계산
         val totalScore = calculateTotalScore(
-            sageokSuri, sageokSuriOheng, sageokSuriEumYang,
-            sajuOheng, sajuEumYang, hoeksuOheng, hoeksuEumYang,
-            baleumOheng, baleumEumYang, sajuNameOheng
+            sageokSuri, sageokSuriOhaeng, sageokSuriEumYang,
+            sajuOhaeng, sajuEumYang, hoeksuOhaeng, hoeksuEumYang,
+            baleumOhaeng, baleumEumYang, sajuNameOhaeng, jawonOhaeng
         )
 
         return NameEvaluation(
             totalScore = totalScore,
             sageokSuri = sageokSuri,
-            sageokSuriOheng = sageokSuriOheng,
+            sageokSuriOhaeng = sageokSuriOhaeng,
             sageokSuriEumYang = sageokSuriEumYang,
-            sajuOheng = sajuOheng,
+            sajuOhaeng = sajuOhaeng,
             sajuEumYang = sajuEumYang,
-            hoeksuOheng = hoeksuOheng,
+            hoeksuOhaeng = hoeksuOhaeng,
             hoeksuEumYang = hoeksuEumYang,
-            baleumOheng = baleumOheng,
+            baleumOhaeng = baleumOhaeng,
             baleumEumYang = baleumEumYang,
-            sajuNameOheng = sajuNameOheng
+            sajuNameOhaeng = sajuNameOhaeng,
+            jawonOhaeng = jawonOhaeng
         )
     }
 
     private fun calculateTotalScore(
         sageokSuri: SageokSuri,
-        sageokSuriOheng: SageokSuriOheng,
+        sageokSuriOhaeng: SageokSuriOhaeng,
         sageokSuriEumYang: SageokSuriEumYang,
-        sajuOheng: SajuOheng,
+        sajuOhaeng: SajuOhaeng,
         sajuEumYang: SajuEumYang,
-        hoeksuOheng: HoeksuOheng,
+        hoeksuOhaeng: HoeksuOhaeng,
         hoeksuEumYang: HoeksuEumYang,
-        baleumOheng: BaleumOheng,
+        baleumOhaeng: BaleumOhaeng,
         baleumEumYang: BaleumEumYang,
-        sajuNameOheng: SajuNameOheng
+        sajuNameOhaeng: SajuNameOhaeng,
+        jawonOhaeng: JawonOhaeng
     ): Int {
         var score = 50  // 기본 점수
 
@@ -72,8 +77,8 @@ class NameAnalyzer {
         score += sageokScore
 
         // 오행 균형 점수 (30점)
-        val ohengScore = calculateOhengBalanceScore(sajuNameOheng, hoeksuOheng, baleumOheng)
-        score += ohengScore
+        val ohaengScore = calculateOhaengBalanceScore(sajuNameOhaeng, hoeksuOhaeng, baleumOhaeng)
+        score += ohaengScore
 
         // 음양 균형 점수 (30점)
         val eumyangScore = calculateEumYangBalanceScore(sajuEumYang, hoeksuEumYang, baleumEumYang)
@@ -101,13 +106,13 @@ class NameAnalyzer {
         return score
     }
 
-    private fun calculateOhengBalanceScore(
-        sajuNameOheng: SajuNameOheng,
-        hoeksuOheng: HoeksuOheng,
-        baleumOheng: BaleumOheng
+    private fun calculateOhaengBalanceScore(
+        sajuNameOhaeng: SajuNameOhaeng,
+        hoeksuOhaeng: HoeksuOhaeng,
+        baleumOhaeng: BaleumOhaeng
     ): Int {
         // 사주이름오행의 균형을 평가
-        val distribution = sajuNameOheng.ohengDistribution.values
+        val distribution = sajuNameOhaeng.ohaengDistribution.values
         val max = distribution.maxOrNull() ?: 0
         val min = distribution.minOrNull() ?: 0
 

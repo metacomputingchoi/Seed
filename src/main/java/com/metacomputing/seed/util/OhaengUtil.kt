@@ -1,6 +1,6 @@
 package com.metacomputing.seed.util
 
-object OhengUtil {
+object OhaengUtil {
     // 천간의 오행
     val HEAVENLY_STEM_OHENG = mapOf(
         "甲" to "목", "乙" to "목",
@@ -34,13 +34,13 @@ object OhengUtil {
     )
 
     // 지지의 지장간을 오행으로 변환
-    fun getHiddenStemOheng(branch: String): List<String> {
+    fun getHiddenStemOhaeng(branch: String): List<String> {
         val hiddenStems = EARTHLY_BRANCH_HIDDEN_STEMS[branch] ?: emptyList()
         return hiddenStems.map { stem -> HEAVENLY_STEM_OHENG[stem] ?: "토" }
     }
 
     // 획수별 오행
-    fun getOhengByStroke(stroke: Int): String {
+    fun getOhaengByStroke(stroke: Int): String {
         val lastDigit = stroke % 10
         return when (lastDigit) {
             1, 2 -> "목"

@@ -2,9 +2,9 @@ package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
 
-class SajuOhengAnalyzer {
-    fun analyze(sajuInfo: SajuInfo): SajuOheng {
-        val ohengCount = mutableMapOf(
+class SajuOhaengAnalyzer {
+    fun analyze(sajuInfo: SajuInfo): SajuOhaeng {
+        val ohaengCount = mutableMapOf(
             "목(木)" to 0,
             "화(火)" to 0,
             "토(土)" to 0,
@@ -15,7 +15,7 @@ class SajuOhengAnalyzer {
         // 천간의 오행 분석
         val stems = listOf(sajuInfo.yearStem, sajuInfo.monthStem, sajuInfo.dayStem, sajuInfo.hourStem)
         stems.forEach { stem ->
-            val oheng = when(stem) {
+            val ohaeng = when(stem) {
                 "甲", "乙" -> "목(木)"
                 "丙", "丁" -> "화(火)"
                 "戊", "己" -> "토(土)"
@@ -23,13 +23,13 @@ class SajuOhengAnalyzer {
                 "壬", "癸" -> "수(水)"
                 else -> "토(土)"
             }
-            ohengCount[oheng] = ohengCount[oheng]!! + 1
+            ohaengCount[ohaeng] = ohaengCount[ohaeng]!! + 1
         }
 
         // 지지의 오행 분석
         val branches = listOf(sajuInfo.yearBranch, sajuInfo.monthBranch, sajuInfo.dayBranch, sajuInfo.hourBranch)
         branches.forEach { branch ->
-            val oheng = when(branch) {
+            val ohaeng = when(branch) {
                 "子" -> "수(水)"
                 "丑" -> "토(土)"
                 "寅", "卯" -> "목(木)"
@@ -41,9 +41,9 @@ class SajuOhengAnalyzer {
                 "亥" -> "수(水)"
                 else -> "토(土)"
             }
-            ohengCount[oheng] = ohengCount[oheng]!! + 1
+            ohaengCount[ohaeng] = ohaengCount[ohaeng]!! + 1
         }
 
-        return SajuOheng(ohengDistribution = ohengCount)
+        return SajuOhaeng(ohaengDistribution = ohaengCount)
     }
 }

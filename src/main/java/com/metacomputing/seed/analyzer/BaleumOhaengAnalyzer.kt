@@ -1,15 +1,15 @@
-// BaleumOhengAnalyzer.kt
+// BaleumOhaengAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
 import com.metacomputing.seed.database.HanjaDatabase
 import java.text.Normalizer
 
-class BaleumOhengAnalyzer {
+class BaleumOhaengAnalyzer {
     private val hanjaDB = HanjaDatabase()
 
-    fun analyze(nameInput: NameInput): BaleumOheng {
-        val ohengCount = mutableMapOf(
+    fun analyze(nameInput: NameInput): BaleumOhaeng {
+        val ohaengCount = mutableMapOf(
             "목(木)" to 0,
             "화(火)" to 0,
             "토(土)" to 0,
@@ -26,11 +26,11 @@ class BaleumOhengAnalyzer {
             val parts = pair.split("/")
             if (parts.size == 2) {
                 val hanjaInfo = hanjaDB.getHanjaInfo(parts[0], parts[1], true)
-                val oheng = normalizeString(hanjaInfo?.integratedInfo?.soundOheng ?: "土")
+                val ohaeng = hanjaInfo?.soundOhaeng ?: "土"  // soundOhaeng 사용
 
-                val key = convertOhengKey(oheng)
-                ohengCount[key] = ohengCount[key]!! + 1
-                arrangement.add(convertToKorean(oheng))
+                val key = convertOhaengKey(ohaeng)
+                ohaengCount[key] = ohaengCount[key]!! + 1
+                arrangement.add(convertToKorean(ohaeng))
             }
         }
 
@@ -38,15 +38,15 @@ class BaleumOhengAnalyzer {
         nameInput.givenName.forEachIndexed { index, char ->
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
-            val oheng = normalizeString(hanjaInfo?.integratedInfo?.soundOheng ?: "土")
+            val ohaeng = hanjaInfo?.soundOhaeng ?: "土"  // soundOhaeng 사용
 
-            val key = convertOhengKey(oheng)
-            ohengCount[key] = ohengCount[key]!! + 1
-            arrangement.add(convertToKorean(oheng))
+            val key = convertOhaengKey(ohaeng)
+            ohaengCount[key] = ohaengCount[key]!! + 1
+            arrangement.add(convertToKorean(ohaeng))
         }
 
-        return BaleumOheng(
-            ohengDistribution = ohengCount,
+        return BaleumOhaeng(
+            ohaengDistribution = ohaengCount,
             arrangement = arrangement
         )
     }
@@ -55,8 +55,8 @@ class BaleumOhengAnalyzer {
         return Normalizer.normalize(input, Normalizer.Form.NFC)
     }
 
-    private fun convertOhengKey(oheng: String): String {
-        return when(oheng) {
+    private fun convertOhaengKey(ohaeng: String): String {
+        return when(ohaeng) {
             "木" -> "목(木)"
             "火" -> "화(火)"
             "土" -> "토(土)"
@@ -66,8 +66,8 @@ class BaleumOhengAnalyzer {
         }
     }
 
-    private fun convertToKorean(oheng: String): String {
-        return when(oheng) {
+    private fun convertToKorean(ohaeng: String): String {
+        return when(ohaeng) {
             "木" -> "목"
             "火" -> "화"
             "土" -> "토"

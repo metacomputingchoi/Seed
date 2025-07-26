@@ -17,7 +17,7 @@ class HoeksuEumYangAnalyzer {
             val parts = pair.split("/")
             if (parts.size == 2) {
                 val hanjaInfo = hanjaDB.getHanjaInfo(parts[0], parts[1], true)
-                val eumyang = hanjaInfo?.integratedInfo?.strokeEumyang ?: 0
+                val eumyang = hanjaInfo?.strokeEumyang ?: 0
                 if (eumyang == 0) {
                     eumCount++
                     arrangement.add("음")
@@ -32,7 +32,7 @@ class HoeksuEumYangAnalyzer {
         nameInput.givenName.forEachIndexed { index, char ->
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
-            val eumyang = hanjaInfo?.integratedInfo?.strokeEumyang ?: 0
+            val eumyang = hanjaInfo?.strokeEumyang ?: 0
             if (eumyang == 0) {
                 eumCount++
                 arrangement.add("음")

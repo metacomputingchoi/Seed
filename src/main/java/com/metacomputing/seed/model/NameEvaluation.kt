@@ -3,15 +3,16 @@ package com.metacomputing.seed.model
 data class NameEvaluation(
     val totalScore: Int,
     val sageokSuri: SageokSuri,
-    val sageokSuriOheng: SageokSuriOheng,
+    val sageokSuriOhaeng: SageokSuriOhaeng,
     val sageokSuriEumYang: SageokSuriEumYang,
-    val sajuOheng: SajuOheng,
+    val sajuOhaeng: SajuOhaeng,
     val sajuEumYang: SajuEumYang,
-    val hoeksuOheng: HoeksuOheng,
+    val hoeksuOhaeng: HoeksuOhaeng,
     val hoeksuEumYang: HoeksuEumYang,
-    val baleumOheng: BaleumOheng,
+    val baleumOhaeng: BaleumOhaeng,
     val baleumEumYang: BaleumEumYang,
-    val sajuNameOheng: SajuNameOheng  // 사주이름오행 추가
+    val sajuNameOhaeng: SajuNameOhaeng,
+    val jawonOhaeng: JawonOhaeng
 )
 
 // 사격수리 - 원형이정
@@ -31,8 +32,8 @@ data class SageokSuri(
 )
 
 // 사격수리 오행
-data class SageokSuriOheng(
-    val ohengDistribution: Map<String, Int>,  // 목, 화, 토, 금, 수의 분포
+data class SageokSuriOhaeng(
+    val ohaengDistribution: Map<String, Int>,  // 목, 화, 토, 금, 수의 분포
     val arrangement: List<String>  // 이격-형격-원격 순서
 )
 
@@ -44,8 +45,8 @@ data class SageokSuriEumYang(
 )
 
 // 사주 오행
-data class SajuOheng(
-    val ohengDistribution: Map<String, Int>
+data class SajuOhaeng(
+    val ohaengDistribution: Map<String, Int>
 )
 
 // 사주 음양
@@ -55,8 +56,8 @@ data class SajuEumYang(
 )
 
 // 획수 오행
-data class HoeksuOheng(
-    val ohengDistribution: Map<String, Int>,
+data class HoeksuOhaeng(
+    val ohaengDistribution: Map<String, Int>,
     val arrangement: List<String>  // 성명 순서
 )
 
@@ -68,8 +69,8 @@ data class HoeksuEumYang(
 )
 
 // 발음 오행
-data class BaleumOheng(
-    val ohengDistribution: Map<String, Int>,
+data class BaleumOhaeng(
+    val ohaengDistribution: Map<String, Int>,
     val arrangement: List<String>  // 성명 순서
 )
 
@@ -81,6 +82,10 @@ data class BaleumEumYang(
 )
 
 // 사주이름오행 (사주 + 이름 획수오행)
-data class SajuNameOheng(
-    val ohengDistribution: Map<String, Int>
+data class SajuNameOhaeng(
+    val ohaengDistribution: Map<String, Int>
+)
+
+data class JawonOhaeng(
+    val ohaengDistribution: Map<String, Int>
 )

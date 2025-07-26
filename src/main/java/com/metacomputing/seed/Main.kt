@@ -34,24 +34,26 @@ fun main() {
     val surnameInfo = hanjaDB.getHanjaInfo(nameInput.surname, nameInput.surnameHanja, true)
     if (surnameInfo != null) {
         println("성씨: ${nameInput.surname}(${nameInput.surnameHanja})")
-        println("  원획수: ${surnameInfo.integratedInfo.originalStrokes}")
-        println("  발음오행: ${surnameInfo.integratedInfo.soundOheng}")
-        println("  획수오행: ${surnameInfo.integratedInfo.resourceOheng}")
-        println("  발음음양: ${if (surnameInfo.integratedInfo.soundEumyang == 0) "음(陰)" else "양(陽)"}")
-        println("  획수음양: ${if (surnameInfo.integratedInfo.strokeEumyang == 0) "음(陰)" else "양(陽)"}")
+        println("  원획수: ${surnameInfo.originalStrokes}")
+        println("  발음오행: ${surnameInfo.soundOhaeng}")
+        println("  획수오행: ${surnameInfo.strokeElement}")  // strokeElement 사용
+        println("  자원오행: ${surnameInfo.sourceElement}")  // sourceElement 표시
+        println("  발음음양: ${if (surnameInfo.soundEumyang == 0) "음(陰)" else "양(陽)"}")
+        println("  획수음양: ${if (surnameInfo.strokeEumyang == 0) "음(陰)" else "양(陽)"}")
     }
 
-    // 이름 한자 정보
+// 이름 한자 정보
     nameInput.givenName.forEachIndexed { index, char ->
         val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
         val nameInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
         if (nameInfo != null) {
             println("이름: $char($hanjaChar)")
-            println("  원획수: ${nameInfo.integratedInfo.originalStrokes}")
-            println("  발음오행: ${nameInfo.integratedInfo.soundOheng}")
-            println("  획수오행: ${nameInfo.integratedInfo.resourceOheng}")
-            println("  발음음양: ${if (nameInfo.integratedInfo.soundEumyang == 0) "음(陰)" else "양(陽)"}")
-            println("  획수음양: ${if (nameInfo.integratedInfo.strokeEumyang == 0) "음(陰)" else "양(陽)"}")
+            println("  원획수: ${nameInfo.originalStrokes}")
+            println("  발음오행: ${nameInfo.soundOhaeng}")
+            println("  획수오행: ${nameInfo.strokeElement}")  // strokeElement 사용
+            println("  자원오행: ${nameInfo.sourceElement}")  // sourceElement 표시
+            println("  발음음양: ${if (nameInfo.soundEumyang == 0) "음(陰)" else "양(陽)"}")
+            println("  획수음양: ${if (nameInfo.strokeEumyang == 0) "음(陰)" else "양(陽)"}")
         }
     }
     println()
@@ -117,35 +119,40 @@ fun main() {
     println("[오행 분석]")
 
     // 사격수리 오행 배치
-    println("사격수리 오행 배치 (이격-형격-원격): ${evaluation.sageokSuriOheng.arrangement.joinToString("")}")
+    println("사격수리 오행 배치 (이격-형격-원격): ${evaluation.sageokSuriOhaeng.arrangement.joinToString("")}")
     println("사격수리 오행 분포:")
-    evaluation.sageokSuriOheng.ohengDistribution.forEach { (element, count) ->
+    evaluation.sageokSuriOhaeng.ohaengDistribution.forEach { (element, count) ->
+        println("  $element: $count 개")
+    }
+
+    // 획수 오행 배치
+    println("획수 오행 배치 (성명 순서): ${evaluation.hoeksuOhaeng.arrangement.joinToString("")}")
+    println("획수 오행:")
+    evaluation.hoeksuOhaeng.ohaengDistribution.forEach { (element, count) ->
+        println("  $element: $count 개")
+    }
+
+    // 발음 오행 배치
+    println("발음 오행 배치 (성명 순서): ${evaluation.baleumOhaeng.arrangement.joinToString("")}")
+    println("발음 오행:")
+    evaluation.baleumOhaeng.ohaengDistribution.forEach { (element, count) ->
+        println("  $element: $count 개")
+    }
+
+    println("자원오행 (이름에서만):")
+    evaluation.jawonOhaeng.ohaengDistribution.forEach { (element, count) ->
         println("  $element: $count 개")
     }
 
     // 사주 오행
     println("사주 오행:")
-    evaluation.sajuOheng.ohengDistribution.forEach { (element, count) ->
-        println("  $element: $count 개")
-    }
-
-    // 획수 오행 배치
-    println("획수 오행 배치 (성명 순서): ${evaluation.hoeksuOheng.arrangement.joinToString("")}")
-    println("획수 오행 (자원오행):")
-    evaluation.hoeksuOheng.ohengDistribution.forEach { (element, count) ->
-        println("  $element: $count 개")
-    }
-
-    // 발음 오행 배치
-    println("발음 오행 배치 (성명 순서): ${evaluation.baleumOheng.arrangement.joinToString("")}")
-    println("발음 오행:")
-    evaluation.baleumOheng.ohengDistribution.forEach { (element, count) ->
+    evaluation.sajuOhaeng.ohaengDistribution.forEach { (element, count) ->
         println("  $element: $count 개")
     }
 
     // 사주이름오행 (사주 + 이름 획수오행)
     println("사주이름오행 (사주 + 이름 획수오행):")
-    evaluation.sajuNameOheng.ohengDistribution.forEach { (element, count) ->
+    evaluation.sajuNameOhaeng.ohaengDistribution.forEach { (element, count) ->
         println("  $element: $count 개")
     }
     println()

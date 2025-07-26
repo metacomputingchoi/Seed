@@ -2,9 +2,9 @@ package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
 
-class SageokSuriOhengAnalyzer {
-    fun analyze(sageokSuri: SageokSuri): SageokSuriOheng {
-        val ohengCount = mutableMapOf(
+class SageokSuriOhaengAnalyzer {
+    fun analyze(sageokSuri: SageokSuri): SageokSuriOhaeng {
+        val ohaengCount = mutableMapOf(
             "목(木)" to 0,
             "화(火)" to 0,
             "토(土)" to 0,
@@ -16,29 +16,29 @@ class SageokSuriOhengAnalyzer {
 
         // 이격의 오행 (끝자리로 계산)
         val iLastDigit = sageokSuri.iGyeok % 10
-        val iOheng = getOhengByLastDigit(iLastDigit)
-        ohengCount[iOheng] = ohengCount[iOheng]!! + 1
-        arrangement.add(iOheng.substring(0, 1))  // "목(木)" -> "목"
+        val iOhaeng = getOhaengByLastDigit(iLastDigit)
+        ohaengCount[iOhaeng] = ohaengCount[iOhaeng]!! + 1
+        arrangement.add(iOhaeng.substring(0, 1))  // "목(木)" -> "목"
 
         // 형격의 오행 (끝자리로 계산)
         val hyeongLastDigit = sageokSuri.hyeongGyeok % 10
-        val hyeongOheng = getOhengByLastDigit(hyeongLastDigit)
-        ohengCount[hyeongOheng] = ohengCount[hyeongOheng]!! + 1
-        arrangement.add(hyeongOheng.substring(0, 1))
+        val hyeongOhaeng = getOhaengByLastDigit(hyeongLastDigit)
+        ohaengCount[hyeongOhaeng] = ohaengCount[hyeongOhaeng]!! + 1
+        arrangement.add(hyeongOhaeng.substring(0, 1))
 
         // 원격의 오행 (끝자리로 계산)
         val wonLastDigit = sageokSuri.wonGyeok % 10
-        val wonOheng = getOhengByLastDigit(wonLastDigit)
-        ohengCount[wonOheng] = ohengCount[wonOheng]!! + 1
-        arrangement.add(wonOheng.substring(0, 1))
+        val wonOhaeng = getOhaengByLastDigit(wonLastDigit)
+        ohaengCount[wonOhaeng] = ohaengCount[wonOhaeng]!! + 1
+        arrangement.add(wonOhaeng.substring(0, 1))
 
-        return SageokSuriOheng(
-            ohengDistribution = ohengCount,
+        return SageokSuriOhaeng(
+            ohaengDistribution = ohaengCount,
             arrangement = arrangement  // 이격-형격-원격 순서
         )
     }
 
-    private fun getOhengByLastDigit(lastDigit: Int): String {
+    private fun getOhaengByLastDigit(lastDigit: Int): String {
         return when (lastDigit) {
             1, 2 -> "목(木)"
             3, 4 -> "화(火)"
