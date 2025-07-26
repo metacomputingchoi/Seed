@@ -61,19 +61,19 @@ object SageokSuriOptimizer {
     }
 
     private fun isValidCombination(surnameTotal: Int, nameStrokes: List<Int>): Boolean {
-        val adjustedNameStrokes = if (nameStrokes.size == 1) {
-            nameStrokes + listOf(0)
-        } else {
-            nameStrokes
+        val adjustedNameStrokes = nameStrokes.toMutableList()
+        if (adjustedNameStrokes.size == 1) {
+            adjustedNameStrokes.add(0)
         }
 
-        val myeongsangja = adjustedNameStrokes.subList(0, adjustedNameStrokes.size / 2).sum()
-        val myeonghaja = adjustedNameStrokes.subList(adjustedNameStrokes.size / 2, adjustedNameStrokes.size).sum()
+        val myeongsangjaEndIdx = adjustedNameStrokes.size / 2
+        val myeongsangja = adjustedNameStrokes.subList(0, myeongsangjaEndIdx).sum()
+        val myeonghaja = adjustedNameStrokes.subList(myeongsangjaEndIdx, adjustedNameStrokes.size).sum()
 
         val won = adjustTo81(adjustedNameStrokes.sum())
         val hyeong = adjustTo81(surnameTotal + myeongsangja)
         val i = adjustTo81(surnameTotal + myeonghaja)
-        val jeong = adjustTo81(surnameTotal + adjustedNameStrokes.sum())
+        val jeong = adjustTo81(surnameTotal + nameStrokes.sum())
 
         return won in validStrokeNumbers &&
                 hyeong in validStrokeNumbers &&

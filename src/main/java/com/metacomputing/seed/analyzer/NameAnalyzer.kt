@@ -134,13 +134,16 @@ class NameAnalyzer {
             hanjaDB.getHanjaStrokes(char.toString(), nameInput.givenNameHanja.getOrNull(i)?.toString() ?: "", false)
         }
 
-        val allStrokes = surnameStrokes + givenNameStrokes
-        val nameStrokes = givenNameStrokes.toMutableList().apply { if (size == 1) add(0) }
+        val nameStrokes = givenNameStrokes.toMutableList()
+        if (nameStrokes.size == 1) {
+            nameStrokes.add(0)
+        }
 
-        val myeongsangja = nameStrokes.subList(0, nameStrokes.size / 2).sum()
-        val myeonghaja = nameStrokes.subList(nameStrokes.size / 2, nameStrokes.size).sum()
+        val myeongsangjaEndIdx = nameStrokes.size / 2
+        val myeongsangja = nameStrokes.subList(0, myeongsangjaEndIdx).sum()
+        val myeonghaja = nameStrokes.subList(myeongsangjaEndIdx, nameStrokes.size).sum()
 
-        val jeong = allStrokes.sum()
+        val jeong = (surnameStrokes + givenNameStrokes).sum()
         val won = nameStrokes.sum()
         val i = surnameStrokes.sum() + myeonghaja
         val hyeong = surnameStrokes.sum() + myeongsangja

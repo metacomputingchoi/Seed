@@ -13,7 +13,8 @@ fun main() {
 
     val queries = listOf(
         "[최/崔][성/成][수/秀]",
-        "[최/崔][_/_][_/_]"
+        "[최/崔][_/_][_/_]",
+//        "[최/崔][_/_]"
     )
 
     queries.forEach { query ->
@@ -65,7 +66,7 @@ fun processAndDisplayResults(query: String, birthInfo: BirthInfo) {
             day = birthInfo.day,
             hour = birthInfo.hour,
             minute = birthInfo.minute,
-            limit = 10000000
+            limit = 100000
         )
         println("\n- 필터된 이름 수: ${searchResults.size}")
         displayTopRecommendations(searchResults.take(10))

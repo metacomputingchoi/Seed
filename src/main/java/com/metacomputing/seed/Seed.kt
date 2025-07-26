@@ -28,7 +28,7 @@ object Seed {
 
     fun searchNames(
         query: String, year: Int, month: Int, day: Int, hour: Int, minute: Int,
-        timezone: Int = -540, limit: Int = 10000000
+        timezone: Int = -540, limit: Int = 100000
     ): List<NameEvaluationResult> {
         val timePoint = CalSDK.getTimePointData(year, month, day, hour, minute, timezone, 0)
         val parser = NameQueryParser(hanjaDB)
