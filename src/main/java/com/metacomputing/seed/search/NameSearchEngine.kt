@@ -5,6 +5,7 @@ import com.metacomputing.seed.model.*
 import com.metacomputing.seed.database.HanjaDatabase
 import com.metacomputing.seed.statistics.NameStatisticsManager
 import com.metacomputing.seed.*
+import com.metacomputing.seed.util.SageokSuriOptimizer
 
 class NameSearchEngine(
     private val hanjaDB: HanjaDatabase,
@@ -28,11 +29,49 @@ class NameSearchEngine(
             }
         }
 
+        // 성씨별로 유효한 이름 후보 필터링
         return surnameCandidates.flatMap { surname ->
+            val surnameStrokes = getSurnameStrokes(surname)
+            val validStrokeCombinations = SageokSuriOptimizer.getValidNameStrokeCombinations(
+                surnameStrokes.getOrNull(0) ?: 0,
+                surnameStrokes.getOrNull(1) ?: 0
+            )
+
+            // 유효한 획수 조합을 가진 이름만 필터링
             validCombinations
                 .filter { matchesNameQuery(it, query.nameBlocks) }
+                .filter { isValidStrokeCombination(it, validStrokeCombinations) }
                 .map { SearchResult(surname.korean, surname.hanja, it.korean, it.hanja) }
         }
+    }
+
+    private fun getSurnameStrokes(surname: SurnameCandidate): List<Int> {
+        return if (surname.korean.length == 2) {
+            listOf(
+                hanjaDB.getHanjaStrokes(surname.korean[0].toString(), surname.hanja[0].toString(), true),
+                hanjaDB.getHanjaStrokes(surname.korean[1].toString(), surname.hanja[1].toString(), true)
+            )
+        } else {
+            listOf(hanjaDB.getHanjaStrokes(surname.korean, surname.hanja, true))
+        }
+    }
+
+    private fun isValidStrokeCombination(
+        combination: NameCombination,
+        validStrokeCombinations: Set<Pair<Int, Int>>
+    ): Boolean {
+        val strokes = combination.korean.indices.map { i ->
+            hanjaDB.getHanjaStrokes(
+                combination.korean[i].toString(),
+                combination.hanja[i].toString(),
+                false
+            )
+        }
+
+        val stroke1 = strokes.getOrNull(0) ?: 0
+        val stroke2 = strokes.getOrNull(1) ?: 0
+
+        return (stroke1 to stroke2) in validStrokeCombinations
     }
 
     private fun matchesNameQuery(combination: NameCombination, blocks: List<NameBlock>): Boolean {

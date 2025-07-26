@@ -9,6 +9,7 @@ import java.text.Normalizer
 class HanjaDatabase {
     var hanjaDict: Map<String, HanjaInfo> = emptyMap()
         private set
+    private val strokeCache = mutableMapOf<String, Int>()
     private var koreanToHanjaMapping: Map<String, List<String>> = emptyMap()
     private var hanjaToKeysMapping: Map<String, List<String>> = emptyMap()
     private var chosungToKoreanMapping: Map<String, List<String>> = emptyMap()
@@ -50,7 +51,18 @@ class HanjaDatabase {
 
     fun getHanjaStrokes(korean: String, hanja: String, isSurname: Boolean = false): Int {
         val key = "$korean/$hanja"
-        return hanjaDict[key]?.strokes?.toIntOrNull() ?: estimatedStrokes[hanja] ?: 10
+        return strokeCache.getOrPut(key) {
+            hanjaDict[key]?.strokes?.toIntOrNull() ?: estimatedStrokes[hanja] ?: 10
+        }
+    }
+
+    fun getHanjaByStrokes(strokes: Int): List<Pair<String, String>> {
+        return hanjaDict.entries
+            .filter { it.value.strokes.toIntOrNull() == strokes }
+            .map { entry ->
+                val parts = entry.key.split("/")
+                parts[0] to parts[1]
+            }
     }
 
     fun getHanjaInfo(korean: String, hanja: String, isSurname: Boolean = false): HanjaDetailedInfo? {
