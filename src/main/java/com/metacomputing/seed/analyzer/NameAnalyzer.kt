@@ -10,23 +10,48 @@ class NameAnalyzer {
     private val hanjaDB = HanjaDatabase()
     private val strokeDB = StrokeMeaningDatabase()
 
-    fun analyze(nameInput: NameInput): NameEvaluation {
-        val sajuInfo = extractSajuInfo(nameInput.timePointResult)
-        val sageokSuri = analyzeSageokSuri(nameInput)
+    // 상수 정의
+    private val EMPTY_OHAENG_DIST = mapOf("목(木)" to 0, "화(火)" to 0, "토(土)" to 0, "금(金)" to 0, "수(水)" to 0)
+    private val DEFAULT_OHAENG = "土"
+    private val SLASH = "/"
+    private val WEIGHT_SAGEOK_SURI = 0.20
+    private val WEIGHT_SAJU_NAME_OHAENG = 0.20
+    private val WEIGHT_HOEKSU_EUMYANG = 0.15
+    private val WEIGHT_BALEUM_OHAENG = 0.15
+    private val WEIGHT_BALEUM_EUMYANG = 0.15
+    private val WEIGHT_SAGEOK_SURI_OHAENG = 0.15
 
+    // 한자 정보 캐시 구조체
+    private data class HanjaInfoCache(
+        val surnameInfos: List<HanjaDetailedInfo?>,
+        val givenNameInfos: List<HanjaDetailedInfo?>
+    )
+
+    fun analyze(nameInput: NameInput): NameEvaluation {
+        // 1. 한자 정보를 미리 모두 로드하여 캐싱
+        val hanjaCache = preloadHanjaInfo(nameInput)
+
+        // 2. 사주 정보 추출
+        val sajuInfo = extractSajuInfo(nameInput.timePointResult)
+
+        // 3. 사격수리 분석 (캐시 사용)
+        val sageokSuri = analyzeSageokSuri(nameInput, hanjaCache)
+
+        // 4. 각종 분석 수행 (캐시 사용)
         val sageokSuriOhaeng = analyzeOhaengFromSageok(sageokSuri)
         val sageokSuriEumYang = analyzeEumYangFromSageok(sageokSuri)
         val sajuOhaeng = analyzeSajuOhaeng(sajuInfo)
         val sajuEumYang = analyzeSajuEumYang(sajuInfo)
-        val hoeksuOhaeng = analyzeWithType(nameInput, AnalysisType.HOEKSU_OHAENG) as OhaengData
-        val hoeksuEumYang = analyzeWithType(nameInput, AnalysisType.HOEKSU_EUMYANG) as EumYangData
-        val baleumOhaeng = analyzeWithType(nameInput, AnalysisType.BALEUM_OHAENG) as OhaengData
-        val baleumEumYang = analyzeWithType(nameInput, AnalysisType.BALEUM_EUMYANG) as EumYangData
-        val jawonOhaeng = analyzeJawonOhaeng(nameInput)
+        val hoeksuOhaeng = analyzeOhaengWithCache(hanjaCache, "stroke")
+        val hoeksuEumYang = analyzeEumYangWithCache(hanjaCache, "stroke")
+        val baleumOhaeng = analyzeOhaengWithCache(hanjaCache, "sound")
+        val baleumEumYang = analyzeEumYangWithCache(hanjaCache, "sound")
+        val jawonOhaeng = analyzeJawonOhaengWithCache(hanjaCache)
         val sajuNameOhaeng = combineSajuNameOhaeng(sajuOhaeng, jawonOhaeng)
 
         val surnameLength = if (nameInput.surname.length == 2) 2 else 1
 
+        // 5. 점수 계산
         val detailedScores = DetailedScores(
             SageokSuriScoreCalculator(sageokSuri).calculate(),
             OhaengScoreCalculator(sageokSuriOhaeng, surnameLength, "오행균형", "sageok").calculate(),
@@ -48,6 +73,35 @@ class NameAnalyzer {
         )
     }
 
+    // 한자 정보 미리 로드
+    private fun preloadHanjaInfo(nameInput: NameInput): HanjaInfoCache {
+        val surnameInfos = mutableListOf<HanjaDetailedInfo?>()
+        val givenNameInfos = mutableListOf<HanjaDetailedInfo?>()
+
+        // 성씨 정보 로드
+        val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
+        surnamePairs.forEach { pair ->
+            val index = pair.indexOf(SLASH)
+            if (index > 0) {
+                val korean = pair.substring(0, index)
+                val hanja = pair.substring(index + 1)
+                surnameInfos.add(hanjaDB.getHanjaInfo(korean, hanja, true))
+            } else {
+                surnameInfos.add(null)
+            }
+        }
+
+        // 이름 정보 로드
+        nameInput.givenName.forEachIndexed { i, char ->
+            val hanja = if (i < nameInput.givenNameHanja.length)
+                nameInput.givenNameHanja[i].toString()
+            else ""
+            givenNameInfos.add(hanjaDB.getHanjaInfo(char.toString(), hanja, false))
+        }
+
+        return HanjaInfoCache(surnameInfos, givenNameInfos)
+    }
+
     private enum class AnalysisType {
         HOEKSU_OHAENG, HOEKSU_EUMYANG, BALEUM_OHAENG, BALEUM_EUMYANG
     }
@@ -61,8 +115,77 @@ class NameAnalyzer {
         }
     }
 
+    // 캐시를 사용한 오행 분석
+    private fun analyzeOhaengWithCache(cache: HanjaInfoCache, type: String): OhaengData {
+        val dist = EMPTY_OHAENG_DIST.toMutableMap()
+        val arr = ArrayList<String>(cache.surnameInfos.size + cache.givenNameInfos.size)
+
+        // 성씨 처리
+        cache.surnameInfos.forEach { info ->
+            if (info != null) {
+                val ohaeng = when (type) {
+                    "stroke" -> info.strokeElement
+                    "sound" -> info.soundOhaeng
+                    else -> DEFAULT_OHAENG
+                }
+                val key = ohaeng.toOhaengFull()
+                dist[key] = dist[key]!! + 1
+                arr.add(key[0].toString())
+            }
+        }
+
+        // 이름 처리
+        cache.givenNameInfos.forEach { info ->
+            if (info != null) {
+                val ohaeng = when (type) {
+                    "stroke" -> info.strokeElement
+                    "sound" -> info.soundOhaeng
+                    else -> DEFAULT_OHAENG
+                }
+                val key = ohaeng.toOhaengFull()
+                dist[key] = dist[key]!! + 1
+                arr.add(key[0].toString())
+            }
+        }
+
+        return OhaengData(dist, arr)
+    }
+
+    // 캐시를 사용한 음양 분석
+    private fun analyzeEumYangWithCache(cache: HanjaInfoCache, type: String): EumYangData {
+        val arr = ArrayList<String>(cache.surnameInfos.size + cache.givenNameInfos.size)
+
+        // 성씨 처리
+        cache.surnameInfos.forEach { info ->
+            if (info != null) {
+                val eumyang = when (type) {
+                    "stroke" -> info.strokeEumyang
+                    "sound" -> info.soundEumyang
+                    else -> 0
+                }
+                arr.add(eumyang.toEumYang())
+            }
+        }
+
+        // 이름 처리
+        cache.givenNameInfos.forEach { info ->
+            if (info != null) {
+                val eumyang = when (type) {
+                    "stroke" -> info.strokeEumyang
+                    "sound" -> info.soundEumyang
+                    else -> 0
+                }
+                arr.add(eumyang.toEumYang())
+            }
+        }
+
+        val eumCount = arr.count { it == "음" }
+        return EumYangData(eumCount, arr.size - eumCount, arr)
+    }
+
+    // 기존 메서드들 (호환성 유지)
     private fun analyzeOhaengUnified(nameInput: NameInput, type: String): OhaengData {
-        val dist = mutableMapOf("목(木)" to 0, "화(火)" to 0, "토(土)" to 0, "금(金)" to 0, "수(水)" to 0)
+        val dist = EMPTY_OHAENG_DIST.toMutableMap()
         val arr = mutableListOf<String>()
 
         val processHanja = { korean: String, hanja: String, isSurname: Boolean ->
@@ -70,20 +193,25 @@ class NameAnalyzer {
             val ohaeng = when (type) {
                 "stroke" -> info?.strokeElement
                 "sound" -> info?.soundOhaeng
-                else -> "土"
+                else -> DEFAULT_OHAENG
             }
-            val key = (ohaeng ?: "土").toOhaengFull()
+            val key = (ohaeng ?: DEFAULT_OHAENG).toOhaengFull()
             dist[key] = dist[key]!! + 1
-            arr.add(key.substring(0, 1))
+            arr.add(key[0].toString())
         }
 
         hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja).forEach { pair ->
-            val parts = pair.split("/")
-            if (parts.size == 2) processHanja(parts[0], parts[1], true)
+            val index = pair.indexOf(SLASH)
+            if (index > 0) {
+                processHanja(pair.substring(0, index), pair.substring(index + 1), true)
+            }
         }
 
         nameInput.givenName.forEachIndexed { i, char ->
-            processHanja(char.toString(), nameInput.givenNameHanja.getOrNull(i)?.toString() ?: "", false)
+            val hanja = if (i < nameInput.givenNameHanja.length)
+                nameInput.givenNameHanja[i].toString()
+            else ""
+            processHanja(char.toString(), hanja, false)
         }
 
         return OhaengData(dist, arr)
@@ -103,114 +231,187 @@ class NameAnalyzer {
         }
 
         hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja).forEach { pair ->
-            val parts = pair.split("/")
-            if (parts.size == 2) processHanja(parts[0], parts[1], true)
+            val index = pair.indexOf(SLASH)
+            if (index > 0) {
+                processHanja(pair.substring(0, index), pair.substring(index + 1), true)
+            }
         }
 
         nameInput.givenName.forEachIndexed { i, char ->
-            processHanja(char.toString(), nameInput.givenNameHanja.getOrNull(i)?.toString() ?: "", false)
+            val hanja = if (i < nameInput.givenNameHanja.length)
+                nameInput.givenNameHanja[i].toString()
+            else ""
+            processHanja(char.toString(), hanja, false)
         }
 
-        return EumYangData(arr.count { it == "음" }, arr.count { it == "양" }, arr)
+        val eumCount = arr.count { it == "음" }
+        return EumYangData(eumCount, arr.size - eumCount, arr)
     }
 
-    private fun extractSajuInfo(time: TimePointResult) = with(time.sexagenaryInfo) {
-        SajuInfo(
-            year.substring(0, 1), year.substring(1, 2),
-            month.substring(0, 1), month.substring(1, 2),
-            day.substring(0, 1), day.substring(1, 2),
-            hour.substring(0, 1), hour.substring(1, 2)
+    private fun extractSajuInfo(time: TimePointResult): SajuInfo {
+        val year = time.sexagenaryInfo.year
+        val month = time.sexagenaryInfo.month
+        val day = time.sexagenaryInfo.day
+        val hour = time.sexagenaryInfo.hour
+
+        return SajuInfo(
+            year[0].toString(), year[1].toString(),
+            month[0].toString(), month[1].toString(),
+            day[0].toString(), day[1].toString(),
+            hour[0].toString(), hour[1].toString()
         )
     }
 
-    private fun analyzeSageokSuri(nameInput: NameInput): SageokSuri {
-        val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
-        val surnameStrokes = surnamePairs.map { pair ->
-            val parts = pair.split("/")
-            if (parts.size == 2) hanjaDB.getHanjaStrokes(parts[0], parts[1], true) else 0
+    private fun analyzeSageokSuri(nameInput: NameInput, cache: HanjaInfoCache): SageokSuri {
+        // 획수 미리 계산
+        val surnameStrokes = ArrayList<Int>(cache.surnameInfos.size)
+        cache.surnameInfos.forEach { info ->
+            surnameStrokes.add(info?.originalStrokes ?: 0)
         }
 
-        val givenNameStrokes = nameInput.givenName.mapIndexed { i, char ->
-            hanjaDB.getHanjaStrokes(char.toString(), nameInput.givenNameHanja.getOrNull(i)?.toString() ?: "", false)
+        val givenNameStrokes = ArrayList<Int>(cache.givenNameInfos.size)
+        cache.givenNameInfos.forEach { info ->
+            givenNameStrokes.add(info?.originalStrokes ?: 0)
         }
 
         val allStrokes = surnameStrokes + givenNameStrokes
-        val nameStrokes = givenNameStrokes.toMutableList().apply { if (size == 1) add(0) }
+        val nameStrokes = if (givenNameStrokes.size == 1) {
+            givenNameStrokes + 0
+        } else {
+            givenNameStrokes
+        }
 
-        val myeongsangja = nameStrokes.subList(0, nameStrokes.size / 2).sum()
-        val myeonghaja = nameStrokes.subList(nameStrokes.size / 2, nameStrokes.size).sum()
+        val halfSize = nameStrokes.size / 2
+        val myeongsangja = nameStrokes.subList(0, halfSize).sum()
+        val myeonghaja = nameStrokes.subList(halfSize, nameStrokes.size).sum()
 
+        val surnameSum = surnameStrokes.sum()
         val jeong = allStrokes.sum()
         val won = nameStrokes.sum()
-        val i = surnameStrokes.sum() + myeonghaja
-        val hyeong = surnameStrokes.sum() + myeongsangja
+        val i = surnameSum + myeonghaja
+        val hyeong = surnameSum + myeongsangja
 
-        return listOf(won, hyeong, i, jeong).map { adjustTo81(it) }.let { adjusted ->
-            SageokSuri(
-                adjusted[0], getMeaning(adjusted[0], "luckyLevel"), getMeaning(adjusted[0], "summary"),
-                adjusted[1], getMeaning(adjusted[1], "luckyLevel"), getMeaning(adjusted[1], "summary"),
-                adjusted[2], getMeaning(adjusted[2], "luckyLevel"), getMeaning(adjusted[2], "summary"),
-                adjusted[3], getMeaning(adjusted[3], "luckyLevel"), getMeaning(adjusted[3], "summary")
-            )
-        }
+        val adjusted = intArrayOf(
+            adjustTo81(won),
+            adjustTo81(hyeong),
+            adjustTo81(i),
+            adjustTo81(jeong)
+        )
+
+        return SageokSuri(
+            adjusted[0], getMeaning(adjusted[0], "luckyLevel"), getMeaning(adjusted[0], "summary"),
+            adjusted[1], getMeaning(adjusted[1], "luckyLevel"), getMeaning(adjusted[1], "summary"),
+            adjusted[2], getMeaning(adjusted[2], "luckyLevel"), getMeaning(adjusted[2], "summary"),
+            adjusted[3], getMeaning(adjusted[3], "luckyLevel"), getMeaning(adjusted[3], "summary")
+        )
     }
 
-    private fun getMeaning(strokes: Int, field: String) =
-        strokeDB.getStrokeMeaning(strokes)?.let {
-            if (field == "luckyLevel") it.luckyLevel else it.summary
-        } ?: ""
+    private fun getMeaning(strokes: Int, field: String): String {
+        val meaning = strokeDB.getStrokeMeaning(strokes) ?: return ""
+        return if (field == "luckyLevel") meaning.luckyLevel else meaning.summary
+    }
 
-    private fun adjustTo81(value: Int) = if (value <= 81) value else ((value - 1) % 81) + 1
+    private inline fun adjustTo81(value: Int): Int = ((value - 1) % 81) + 1
 
     private fun analyzeOhaengFromSageok(sageokSuri: SageokSuri): OhaengData {
-        val dist = mutableMapOf("목(木)" to 0, "화(火)" to 0, "토(土)" to 0, "금(金)" to 0, "수(水)" to 0)
-        val arr = listOf(sageokSuri.iGyeok, sageokSuri.hyeongGyeok, sageokSuri.wonGyeok).map {
-            it.toOhaengByLastDigit().also { ohaeng -> dist[ohaeng] = dist[ohaeng]!! + 1 }.substring(0, 1)
+        val dist = EMPTY_OHAENG_DIST.toMutableMap()
+        val values = intArrayOf(sageokSuri.iGyeok, sageokSuri.hyeongGyeok, sageokSuri.wonGyeok)
+        val arr = ArrayList<String>(3)
+
+        values.forEach { value ->
+            val ohaeng = value.toOhaengByLastDigit()
+            dist[ohaeng] = dist[ohaeng]!! + 1
+            arr.add(ohaeng[0].toString())
         }
+
         return OhaengData(dist, arr)
     }
 
     private fun analyzeEumYangFromSageok(sageokSuri: SageokSuri): EumYangData {
-        val arr = listOf(sageokSuri.iGyeok, sageokSuri.hyeongGyeok, sageokSuri.wonGyeok).map { it.toEumYang() }
-        return EumYangData(arr.count { it == "음" }, arr.count { it == "양" }, arr)
+        val values = intArrayOf(sageokSuri.iGyeok, sageokSuri.hyeongGyeok, sageokSuri.wonGyeok)
+        val arr = ArrayList<String>(3)
+        var eumCount = 0
+
+        values.forEach { value ->
+            val eumyang = value.toEumYang()
+            arr.add(eumyang)
+            if (eumyang == "음") eumCount++
+        }
+
+        return EumYangData(eumCount, 3 - eumCount, arr)
     }
 
     private fun analyzeSajuOhaeng(sajuInfo: SajuInfo): OhaengData {
-        val dist = mutableMapOf("목(木)" to 0, "화(火)" to 0, "토(土)" to 0, "금(金)" to 0, "수(水)" to 0)
-        listOf(sajuInfo.yearStem, sajuInfo.monthStem, sajuInfo.dayStem, sajuInfo.hourStem).forEach {
-            Constants.STEM_OHAENG[it.normalize()]?.let { ohaeng -> dist[ohaeng] = dist[ohaeng]!! + 1 }
+        val dist = EMPTY_OHAENG_DIST.toMutableMap()
+        val stems = arrayOf(sajuInfo.yearStem, sajuInfo.monthStem, sajuInfo.dayStem, sajuInfo.hourStem)
+        val branches = arrayOf(sajuInfo.yearBranch, sajuInfo.monthBranch, sajuInfo.dayBranch, sajuInfo.hourBranch)
+
+        stems.forEach { stem ->
+            Constants.STEM_OHAENG[stem]?.let { ohaeng ->
+                dist[ohaeng] = dist[ohaeng]!! + 1
+            }
         }
-        listOf(sajuInfo.yearBranch, sajuInfo.monthBranch, sajuInfo.dayBranch, sajuInfo.hourBranch).forEach {
-            Constants.BRANCH_OHAENG[it.normalize()]?.let { ohaeng -> dist[ohaeng] = dist[ohaeng]!! + 1 }
+
+        branches.forEach { branch ->
+            Constants.BRANCH_OHAENG[branch]?.let { ohaeng ->
+                dist[ohaeng] = dist[ohaeng]!! + 1
+            }
         }
+
         return OhaengData(dist)
     }
 
     private fun analyzeSajuEumYang(sajuInfo: SajuInfo): EumYangData {
         var eum = 0
         var yang = 0
-        listOf(sajuInfo.yearStem, sajuInfo.monthStem, sajuInfo.dayStem, sajuInfo.hourStem).forEach {
-            if (Constants.YANG_STEMS.contains(it.normalize())) yang++ else eum++
+
+        val stems = arrayOf(sajuInfo.yearStem, sajuInfo.monthStem, sajuInfo.dayStem, sajuInfo.hourStem)
+        val branches = arrayOf(sajuInfo.yearBranch, sajuInfo.monthBranch, sajuInfo.dayBranch, sajuInfo.hourBranch)
+
+        stems.forEach { stem ->
+            if (Constants.YANG_STEMS.contains(stem)) yang++ else eum++
         }
-        listOf(sajuInfo.yearBranch, sajuInfo.monthBranch, sajuInfo.dayBranch, sajuInfo.hourBranch).forEach {
-            if (Constants.YANG_BRANCHES.contains(it.normalize())) yang++ else eum++
+
+        branches.forEach { branch ->
+            if (Constants.YANG_BRANCHES.contains(branch)) yang++ else eum++
         }
+
         return EumYangData(eum, yang)
     }
 
     private fun analyzeJawonOhaeng(nameInput: NameInput): OhaengData {
-        val dist = mutableMapOf("목(木)" to 0, "화(火)" to 0, "토(土)" to 0, "금(金)" to 0, "수(水)" to 0)
+        val dist = EMPTY_OHAENG_DIST.toMutableMap()
+
         nameInput.givenName.forEachIndexed { i, char ->
-            val info = hanjaDB.getHanjaInfo(char.toString(), nameInput.givenNameHanja.getOrNull(i)?.toString() ?: "", false)
-            val key = (info?.sourceElement ?: "土").toOhaengFull()
+            val hanja = if (i < nameInput.givenNameHanja.length)
+                nameInput.givenNameHanja[i].toString()
+            else ""
+            val info = hanjaDB.getHanjaInfo(char.toString(), hanja, false)
+            val key = (info?.sourceElement ?: DEFAULT_OHAENG).toOhaengFull()
             dist[key] = dist[key]!! + 1
         }
+
+        return OhaengData(dist)
+    }
+
+    private fun analyzeJawonOhaengWithCache(cache: HanjaInfoCache): OhaengData {
+        val dist = EMPTY_OHAENG_DIST.toMutableMap()
+
+        cache.givenNameInfos.forEach { info ->
+            if (info != null) {
+                val key = info.sourceElement.toOhaengFull()
+                dist[key] = dist[key]!! + 1
+            }
+        }
+
         return OhaengData(dist)
     }
 
     private fun combineSajuNameOhaeng(sajuOhaeng: OhaengData, jawonOhaeng: OhaengData): OhaengData {
         val combined = sajuOhaeng.ohaengDistribution.toMutableMap()
-        jawonOhaeng.ohaengDistribution.forEach { (k, v) -> combined[k] = combined[k]!! + v }
+        jawonOhaeng.ohaengDistribution.forEach { (k, v) ->
+            combined[k] = combined[k]!! + v
+        }
         return OhaengData(combined)
     }
 
@@ -218,7 +419,9 @@ class NameAnalyzer {
         val total = eumyang.eumCount + eumyang.yangCount
         if (total == 0) return ScoreDetail(0, 100, "사주 데이터 없음", false)
 
-        val ratio = minOf(eumyang.eumCount, eumyang.yangCount).toDouble() / total
+        val minCount = minOf(eumyang.eumCount, eumyang.yangCount)
+        val ratio = minCount.toDouble() / total
+
         val score = when {
             ratio >= 0.4 -> 100
             ratio >= 0.375 -> 90
@@ -227,25 +430,38 @@ class NameAnalyzer {
             else -> 30
         }
 
+        val ratioPercent = (ratio * 100).toInt()
+        val oppositePercent = ((1 - ratio) * 100).toInt()
+
         return ScoreDetail(
             score, 100,
-            "사주음양 - 음${eumyang.eumCount}:양${eumyang.yangCount} (${(ratio * 100).toInt()}:${((1-ratio) * 100).toInt()})",
+            "사주음양 - 음${eumyang.eumCount}:양${eumyang.yangCount} ($ratioPercent:$oppositePercent)",
             ratio >= 0.25
         )
     }
 
     private fun calculateJawonOhaengScore(sajuOhaeng: OhaengData, jawonOhaeng: OhaengData): ScoreDetail {
-        val sajuAvg = sajuOhaeng.ohaengDistribution.values.average()
+        val sajuValues = sajuOhaeng.ohaengDistribution.values
+        val sajuAvg = if (sajuValues.isNotEmpty()) sajuValues.average() else 0.0
+
         var score = 70
         val reasons = mutableListOf<String>()
 
-        val weakOhaengs = sajuOhaeng.ohaengDistribution.filter { it.value < sajuAvg }.keys
-        val complemented = weakOhaengs.count { (jawonOhaeng.ohaengDistribution[it] ?: 0) > 0 }
+        val weakOhaengs = sajuOhaeng.ohaengDistribution.filterValues { it < sajuAvg }.keys
+        var complemented = 0
+        weakOhaengs.forEach { ohaeng ->
+            if ((jawonOhaeng.ohaengDistribution[ohaeng] ?: 0) > 0) {
+                complemented++
+            }
+        }
 
         score += complemented * 10
-        if (complemented > 0) reasons.add("${weakOhaengs.joinToString(", ")} 보완")
+        if (complemented > 0) {
+            reasons.add("${weakOhaengs.joinToString(", ")} 보완")
+        }
 
-        val jawonBalance = if (jawonOhaeng.ohaengDistribution.values.sum() > 0) {
+        val jawonSum = jawonOhaeng.ohaengDistribution.values.sum()
+        val jawonBalance = if (jawonSum > 0) {
             val max = jawonOhaeng.ohaengDistribution.values.maxOrNull() ?: 0
             val min = jawonOhaeng.ohaengDistribution.values.minOrNull() ?: 0
             if (max - min <= 1) 10 else 0
@@ -262,18 +478,12 @@ class NameAnalyzer {
     }
 
     private fun calculateWeightedTotalScore(scores: DetailedScores): Int {
-        val weights = mapOf(
-            "sageokSuri" to 0.20, "sajuNameOhaeng" to 0.20,
-            "hoeksuEumYang" to 0.15, "baleumOhaeng" to 0.15,
-            "baleumEumYang" to 0.15, "sageokSuriOhaeng" to 0.15
-        )
-
-        val weighted = scores.sageokSuriScore.score * weights["sageokSuri"]!! +
-                      scores.sajuNameOhaengScore.score * weights["sajuNameOhaeng"]!! +
-                      scores.hoeksuEumYangScore.score * weights["hoeksuEumYang"]!! +
-                      scores.baleumOhaengScore.score * weights["baleumOhaeng"]!! +
-                      scores.baleumEumYangScore.score * weights["baleumEumYang"]!! +
-                      scores.sageokSuriOhaengScore.score * weights["sageokSuriOhaeng"]!!
+        val weighted = scores.sageokSuriScore.score * WEIGHT_SAGEOK_SURI +
+                scores.sajuNameOhaengScore.score * WEIGHT_SAJU_NAME_OHAENG +
+                scores.hoeksuEumYangScore.score * WEIGHT_HOEKSU_EUMYANG +
+                scores.baleumOhaengScore.score * WEIGHT_BALEUM_OHAENG +
+                scores.baleumEumYangScore.score * WEIGHT_BALEUM_EUMYANG +
+                scores.sageokSuriOhaengScore.score * WEIGHT_SAGEOK_SURI_OHAENG
 
         return weighted.toInt().coerceIn(0, 100)
     }

@@ -46,6 +46,26 @@ object Constants {
     val YANG_JUNGSUNG = setOf('ㅏ', 'ㅑ', 'ㅐ', 'ㅒ', 'ㅗ', 'ㅛ', 'ㅘ', 'ㅙ', 'ㅚ')
 }
 
+object HangulDecomposer {
+    private val CHOSUNG_LOOKUP = ByteArray(11172) { i -> (i / 588).toByte() }
+    private val JUNGSUNG_LOOKUP = ByteArray(11172) { i -> ((i % 588) / 28).toByte() }
+    private const val EMPTY = ""
+
+    fun getChosung(char: Char): String {
+        val code = char.code - 0xAC00
+        return if (code in 0..11171) {
+            Constants.CHOSUNG_LIST[CHOSUNG_LOOKUP[code].toInt()]
+        } else EMPTY
+    }
+
+    fun getJungsung(char: Char): String {
+        val code = char.code - 0xAC00
+        return if (code in 0..11171) {
+            Constants.JUNGSUNG_LIST[JUNGSUNG_LOOKUP[code].toInt()]
+        } else EMPTY
+    }
+}
+
 fun String.normalize() = Normalizer.normalize(this, Normalizer.Form.NFC)
 fun String.toOhaengKorean() = Constants.OHAENG_KOREAN[this.normalize()] ?: "토"
 fun String.toOhaengFull() = Constants.OHAENG_FULL[this.normalize()] ?: "토(土)"
@@ -58,11 +78,5 @@ fun Int.toOhaengByLastDigit() = when (this % 10) {
     9, 0 -> "수(水)"
     else -> "토(土)"
 }
-
-fun Char.extractChosung() = if (this in '가'..'힣') {
-    Constants.CHOSUNG_LIST.getOrNull((this.code - 0xAC00) / (21 * 28)) ?: ""
-} else ""
-
-fun Char.extractJungsung() = if (this in '가'..'힣') {
-    Constants.JUNGSUNG_LIST.getOrNull(((this.code - 0xAC00) % (21 * 28)) / 28) ?: ""
-} else ""
+fun Char.extractChosung() = HangulDecomposer.getChosung(this)
+fun Char.extractJungsung() = HangulDecomposer.getJungsung(this)
