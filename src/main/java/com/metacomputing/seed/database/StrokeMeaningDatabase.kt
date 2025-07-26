@@ -2,7 +2,6 @@
 package com.metacomputing.seed.database
 
 import com.metacomputing.seed.model.StrokeData
-import com.metacomputing.seed.model.StrokeMeaning
 import kotlinx.serialization.json.Json
 import java.io.File
 

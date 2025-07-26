@@ -97,7 +97,7 @@ class NameAnalyzer {
         }
     }
 
-    private fun getMeaning(strokes: Int, field: String) = 
+    private fun getMeaning(strokes: Int, field: String) =
         strokeDB.getStrokeMeaning(strokes)?.let {
             if (field == "luckyLevel") it.luckyLevel else it.summary
         } ?: ""
@@ -106,7 +106,7 @@ class NameAnalyzer {
 
     private fun analyzeSageokSuriOhaeng(sageokSuri: SageokSuri): OhaengData {
         val dist = mutableMapOf("목(木)" to 0, "화(火)" to 0, "토(土)" to 0, "금(金)" to 0, "수(水)" to 0)
-        val arr = listOf(sageokSuri.iGyeok, sageokSuri.hyeongGyeok, sageokSuri.wonGyeok).map { 
+        val arr = listOf(sageokSuri.iGyeok, sageokSuri.hyeongGyeok, sageokSuri.wonGyeok).map {
             it.toOhaengByLastDigit().also { ohaeng -> dist[ohaeng] = dist[ohaeng]!! + 1 }.substring(0, 1)
         }
         return OhaengData(dist, arr)

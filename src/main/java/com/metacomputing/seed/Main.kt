@@ -23,12 +23,12 @@ fun main() {
 }
 
 fun processAndDisplayResults(query: String, birthInfo: BirthInfo) {
-    // 완전한 이름인지 검색 패턴인지 확인
+
     val isCompleteQuery = query.count { it == '[' } == query.count { it == ']' } &&
             !query.contains("_")
 
     if (isCompleteQuery) {
-        // 완전한 이름 평가
+
         val parsed = parseCompleteQuery(query)
         if (parsed != null) {
             val result = Seed.evaluateName(
@@ -156,7 +156,6 @@ fun parseCompleteQuery(query: String): ParsedName? {
     return ParsedName(surname, surnameHanja, givenName, givenNameHanja)
 }
 
-// Data classes
 data class BirthInfo(
     val year: Int,
     val month: Int,

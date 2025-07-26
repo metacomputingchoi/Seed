@@ -3,11 +3,7 @@ package com.metacomputing.seed.database
 
 import com.metacomputing.seed.model.HanjaInfo
 import com.metacomputing.seed.util.BaleumAnalyzer
-import com.metacomputing.seed.*
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.builtins.serializer
 import java.io.File
 import java.text.Normalizer
 
@@ -45,7 +41,6 @@ class HanjaDatabase {
     private fun loadHanjaDict() {
         val rawDict: Map<String, HanjaInfo> = loadJsonData("name_char_hanja_dict_effective.json")
 
-        // 원본과 동일하게 정규화 처리
         hanjaDict = rawDict.mapKeys { (key, _) ->
             Normalizer.normalize(key, Normalizer.Form.NFC)
         }.mapValues { (_, value) ->

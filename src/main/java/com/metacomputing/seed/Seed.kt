@@ -12,9 +12,6 @@ import com.metacomputing.seed.search.NameSearchEngine
 import com.metacomputing.seed.statistics.NameStatisticsLoader
 import com.metacomputing.seed.statistics.NameStatisticsAnalyzer
 
-/**
- * 작명 분석 엔진 SDK
- */
 object Seed {
 
     private val hanjaDB = HanjaDatabase()
@@ -22,9 +19,6 @@ object Seed {
     private val statsLoader = NameStatisticsLoader()
     private val statsAnalyzer = NameStatisticsAnalyzer()
 
-    /**
-     * 특정 이름을 평가합니다.
-     */
     fun evaluateName(
         surname: String,
         surnameHanja: String,
@@ -51,9 +45,6 @@ object Seed {
         )
     }
 
-    /**
-     * 이름 패턴으로 검색하고 평가합니다.
-     */
     fun searchNames(
         query: String,
         year: Int,
@@ -68,14 +59,12 @@ object Seed {
         val parser = NameQueryParser(hanjaDB)
         val parsedQuery = parser.parse(query)
 
-        // 완전한 이름이 입력된 경우
         if (isCompleteQuery(parsedQuery)) {
             val nameInput = buildNameInput(parsedQuery, timePoint)
             val evaluation = analyzer.analyze(nameInput)
             return listOf(createEvaluationResult(nameInput, evaluation))
         }
 
-        // 패턴 검색인 경우
         val searchEngine = NameSearchEngine(hanjaDB, statsLoader)
         val searchResults = searchEngine.search(parsedQuery)
 
@@ -98,9 +87,6 @@ object Seed {
             }
     }
 
-    /**
-     * 이름에 대한 통계 정보를 가져옵니다.
-     */
     fun getNameStatistics(givenName: String): NameStatisticsResult? {
         val stats = statsLoader.loadStatistics()[givenName] ?: return null
 
@@ -113,14 +99,9 @@ object Seed {
         )
     }
 
-    /**
-     * 한자 정보를 조회합니다.
-     */
     fun getHanjaInfo(korean: String, hanja: String): HanjaDetailedInfo? {
         return hanjaDB.getHanjaInfo(korean, hanja, false)
     }
-
-    // Private helper functions
 
     private fun checkIfPassed(evaluation: NameEvaluation): Boolean {
         val scores = evaluation.detailedScores
@@ -197,8 +178,6 @@ object Seed {
         )
     }
 }
-
-// Result data classes for SDK
 
 data class NameEvaluationResult(
     val fullName: String,
