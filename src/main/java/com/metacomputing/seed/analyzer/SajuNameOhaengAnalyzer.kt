@@ -1,4 +1,4 @@
-// analyzer/SajuNameOhaengAnalyzer.kt - 완전히 다시 작성
+// analyzer/SajuNameOhaengAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
@@ -9,15 +9,13 @@ class SajuNameOhaengAnalyzer {
     private val hanjaDB = HanjaDatabase()
 
     fun analyze(sajuOhaeng: SajuOhaeng, hoeksuOhaeng: HoeksuOhaeng, nameInput: NameInput): SajuNameOhaeng {
-        // 사주오행 복사본 생성
+
         val combinedOhaeng = sajuOhaeng.ohaengDistribution.toMutableMap()
 
-        // 자원오행을 사주오행에 더하기
         nameInput.givenName.forEachIndexed { index, char ->
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
 
-            // NFC normalize 적용
             val sourceElement = normalizeString(hanjaInfo?.sourceElement ?: "土")
 
             val key = when(sourceElement) {
@@ -29,7 +27,6 @@ class SajuNameOhaengAnalyzer {
                 else -> "토(土)"
             }
 
-            // 해당 오행에 1 더하기
             combinedOhaeng[key] = (combinedOhaeng[key] ?: 0) + 1
         }
 

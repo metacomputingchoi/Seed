@@ -88,7 +88,6 @@ class HanjaDatabase {
             } ?: emptyMap()
         }
 
-        // 로드 후 모든 키와 값들을 normalize
         hanjaDict = rawHanjaDict.mapKeys { (key, _) ->
             Normalizer.normalize(key, Normalizer.Form.NFC)
         }.mapValues { (_, value) ->
@@ -96,7 +95,7 @@ class HanjaDatabase {
                 charKo = Normalizer.normalize(value.charKo, Normalizer.Form.NFC),
                 hanja = Normalizer.normalize(value.hanja, Normalizer.Form.NFC),
                 meaning = Normalizer.normalize(value.meaning, Normalizer.Form.NFC),
-                strokes = value.strokes, // 숫자 문자열이므로 그대로
+                strokes = value.strokes,
                 strokeElement = Normalizer.normalize(value.strokeElement, Normalizer.Form.NFC),
                 radical = Normalizer.normalize(value.radical, Normalizer.Form.NFC),
                 sourceElement = Normalizer.normalize(value.sourceElement, Normalizer.Form.NFC)

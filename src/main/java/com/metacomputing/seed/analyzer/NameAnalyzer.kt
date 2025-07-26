@@ -35,7 +35,6 @@ class NameAnalyzer {
         val sajuNameOhaeng = sajuNameOhaengAnalyzer.analyze(sajuOhaeng, hoeksuOhaeng, nameInput)
         val jawonOhaeng = jawonOhaengAnalyzer.analyze(nameInput)
 
-        // 상세 점수 계산
         val detailedScores = calculateDetailedScores(
             sageokSuri, sageokSuriOhaeng, sageokSuriEumYang,
             sajuOhaeng, sajuEumYang, hoeksuOhaeng, hoeksuEumYang,
@@ -43,7 +42,6 @@ class NameAnalyzer {
             nameInput
         )
 
-        // 가중치를 적용한 총점 계산
         val totalScore = calculateWeightedTotalScore(detailedScores)
 
         return NameEvaluation(
@@ -92,7 +90,7 @@ class NameAnalyzer {
     }
 
     private fun calculateWeightedTotalScore(scores: DetailedScores): Int {
-        // 가중치 정의 (성명학 중요도 기반)
+
         val weights = mapOf(
             "sageokSuri" to 0.20,
             "sajuNameOhaeng" to 0.20,
@@ -121,13 +119,11 @@ class NameAnalyzer {
         return weightedScore.toInt().coerceIn(0, 100)
     }
 
-    // 1. 사격수리 점수 계산 - isPassed 추가
     private fun calculateSageokSuriScore(sageokSuri: SageokSuri): ScoreDetail {
         var score = 0
         val reasons = mutableListOf<String>()
         var passCount = 0
 
-        // 운세 등급별 점수 정의
         fun getFortuneScore(fortune: String): Int {
             return when {
                 fortune.contains("최상운수") -> 25
@@ -139,7 +135,6 @@ class NameAnalyzer {
             }
         }
 
-        // 각 격의 점수와 통과 여부 체크
         val fortunes = listOf(
             Pair("원격", sageokSuri.wonGyeokFortune),
             Pair("형격", sageokSuri.hyeongGyeokFortune),
@@ -152,11 +147,9 @@ class NameAnalyzer {
             score += fortuneScore
             reasons.add("$name: $fortune")
 
-            // 양운수 이상이면 통과로 카운트
             if (fortuneScore >= 15) passCount++
         }
 
-        // 4개 모두가 양운수 이상이어야 통과 (수정)
         val isPassed = passCount == 4
 
         return ScoreDetail(
@@ -167,15 +160,12 @@ class NameAnalyzer {
         )
     }
 
-    // 2. 사격수리오행 점수 계산 - 균형 체크 제거
     private fun calculateSageokSuriOhaengScore(sageokSuriOhaeng: SageokSuriOhaeng): ScoreDetail {
-        // 균형도는 점수 계산에만 사용
+
         val balanceScore = OhaengRelationUtil.calculateBalanceScore(sageokSuriOhaeng.ohaengDistribution) * 0.5
 
-        // 배열 상생상극 점수
         val arrayScore = OhaengRelationUtil.calculateArrayScore(sageokSuriOhaeng.arrangement) * 0.5
 
-        // 더 엄격한 상극 체크
         val isPassed = PassFailUtil.checkSageokSuriOhaeng(sageokSuriOhaeng.arrangement)
 
         val totalScore = (balanceScore + arrayScore).toInt()
@@ -187,10 +177,10 @@ class NameAnalyzer {
             isPassed = isPassed
         )
     }
-    // 상극 체크 헬퍼 메서드 수정
+
     private fun hasAnySangGeuk(arrangement: List<String>): Boolean {
         for (i in 0 until arrangement.size - 1) {
-            // 같은 오행 연속은 상극으로 보지 않음
+
             if (arrangement[i] == arrangement[i + 1]) {
                 continue
             }
@@ -201,12 +191,10 @@ class NameAnalyzer {
         return false
     }
 
-    // 3. 사격수리음양 - isPassed 추가
     private fun calculateSageokSuriEumYangScore(sageokSuriEumYang: SageokSuriEumYang): ScoreDetail {
         val total = sageokSuriEumYang.eumCount + sageokSuriEumYang.yangCount
         if (total == 0) return ScoreDetail(0, 100, "데이터 없음", false)
 
-        // 기존 점수 계산...
         val ratio = minOf(sageokSuriEumYang.eumCount, sageokSuriEumYang.yangCount).toDouble() / total
         val ratioScore = when {
             ratio >= 0.4 -> 50
@@ -215,10 +203,9 @@ class NameAnalyzer {
             else -> 10
         }
 
-        // isPassed: 음양 비율이 적절하면 통과 (2:8 이상)
         val isPassed = ratio >= 0.2
 
-        val totalScore = ratioScore + 50 // 간단히 처리
+        val totalScore = ratioScore + 50
 
         return ScoreDetail(
             score = totalScore,
@@ -228,15 +215,12 @@ class NameAnalyzer {
         )
     }
 
-    // 4. 획수오행 - isPassed 추가
     private fun calculateHoeksuOhaengScore(hoeksuOhaeng: HoeksuOhaeng, nameInput: NameInput): ScoreDetail {
         val balanceScore = OhaengRelationUtil.calculateBalanceScore(hoeksuOhaeng.ohaengDistribution) * 0.5
         val arrayScore = OhaengRelationUtil.calculateArrayScore(hoeksuOhaeng.arrangement) * 0.5
 
-        // 성씨 길이 계산
         val surnameLength = if (nameInput.surname.length == 2) 2 else 1
 
-        // 상생 체크 (상극이 없어야 통과)
         val isPassed = PassFailUtil.checkOhaengSangSaeng(hoeksuOhaeng.arrangement, surnameLength)
 
         val totalScore = (balanceScore + arrayScore).toInt()
@@ -249,7 +233,6 @@ class NameAnalyzer {
         )
     }
 
-    // 5. 획수음양 - isPassed 추가
     private fun calculateHoeksuEumYangScore(hoeksuEumYang: HoeksuEumYang, nameInput: NameInput): ScoreDetail {
         val surnameLength = if (nameInput.surname.length == 2) 2 else 1
 
@@ -262,14 +245,12 @@ class NameAnalyzer {
         )
     }
 
-    // 6. 발음오행 - isPassed 추가
     private fun calculateBaleumOhaengScore(baleumOhaeng: BaleumOhaeng, nameInput: NameInput): ScoreDetail {
         val balanceScore = OhaengRelationUtil.calculateBalanceScore(baleumOhaeng.ohaengDistribution) * 0.5
         val arrayScore = OhaengRelationUtil.calculateArrayScore(baleumOhaeng.arrangement) * 0.5
 
         val surnameLength = if (nameInput.surname.length == 2) 2 else 1
 
-        // 상생 체크
         val isPassed = PassFailUtil.checkOhaengSangSaeng(baleumOhaeng.arrangement, surnameLength)
 
         val totalScore = (balanceScore + arrayScore).toInt()
@@ -282,7 +263,6 @@ class NameAnalyzer {
         )
     }
 
-    // 7. 발음음양 - isPassed 추가
     private fun calculateBaleumEumYangScore(baleumEumYang: BaleumEumYang, nameInput: NameInput): ScoreDetail {
         val surnameLength = if (nameInput.surname.length == 2) 2 else 1
 
@@ -295,32 +275,27 @@ class NameAnalyzer {
         )
     }
 
-    // 8. 사주이름오행 점수 계산 - 올바른 균등분배 확인
     private fun calculateSajuNameOhaengScore(
         sajuOhaeng: SajuOhaeng,
         sajuNameOhaeng: SajuNameOhaeng,
         jawonOhaeng: JawonOhaeng
     ): ScoreDetail {
-        // 자원오행이 실제로 사주의 부족한 오행을 보완하는지 확인
+
         val sajuZeroOhaengs = sajuOhaeng.ohaengDistribution.filter { it.value == 0 }.keys
         val finalZeroOhaengs = sajuNameOhaeng.ohaengDistribution.filter { it.value == 0 }.keys
 
-        // 자원오행으로 0이 줄어든 개수
         val zeroReduction = sajuZeroOhaengs.size - finalZeroOhaengs.size
 
-        // 자원오행이 0인 오행을 가지고 있는 개수
         val jawonForZero = sajuZeroOhaengs.count { zeroOhaeng ->
             (jawonOhaeng.ohaengDistribution[zeroOhaeng] ?: 0) > 0
         }
 
-        // isPassed: 자원오행이 0인 오행을 보완할 수 있는 만큼 보완했는지
         val isPassed = when {
-            sajuZeroOhaengs.isEmpty() -> true  // 0인 오행이 없으면 통과
-            jawonForZero == 0 -> true  // 보완할 수 있는 자원오행이 없으면 어쩔 수 없이 통과
-            else -> zeroReduction == jawonForZero  // 보완 가능한 만큼 보완했으면 통과
+            sajuZeroOhaengs.isEmpty() -> true
+            jawonForZero == 0 -> true
+            else -> zeroReduction == jawonForZero
         }
 
-        // 점수 계산
         val totalBalanceScore = OhaengRelationUtil.calculateBalanceScore(sajuNameOhaeng.ohaengDistribution)
         val complementScore = if (sajuZeroOhaengs.isNotEmpty() && jawonForZero > 0) {
             (zeroReduction.toDouble() / jawonForZero * 50).toInt()
@@ -348,17 +323,15 @@ class NameAnalyzer {
         )
     }
 
-    // 9. 자원오행 점수 계산 - isPassed 추가
     private fun calculateJawonOhaengScore(sajuOhaeng: SajuOhaeng, jawonOhaeng: JawonOhaeng): ScoreDetail {
-        // 사주의 약한 오행을 보완하는 정도 평가
+
         val sajuValues = sajuOhaeng.ohaengDistribution.values
         val sajuAvg = sajuValues.average()
 
-        var score = 70 // 기본 점수
+        var score = 70
         val reasons = mutableListOf<String>()
         var complementedWeak = 0
 
-        // 사주에서 평균 이하인 오행 찾기
         val weakOhaengs = mutableListOf<String>()
         sajuOhaeng.ohaengDistribution.forEach { (ohaeng, count) ->
             if (count < sajuAvg) {
@@ -372,7 +345,6 @@ class NameAnalyzer {
             }
         }
 
-        // 자원오행 자체의 균형도
         val jawonBalance = if (jawonOhaeng.ohaengDistribution.values.sum() > 0) {
             val distribution = jawonOhaeng.ohaengDistribution.values
             val max = distribution.maxOrNull() ?: 0
@@ -382,11 +354,10 @@ class NameAnalyzer {
 
         score = (score + jawonBalance).coerceIn(0, 100)
 
-        // isPassed: 약한 오행의 50% 이상을 보완하면 통과
         val isPassed = if (weakOhaengs.isEmpty()) {
-            true  // 약한 오행이 없으면 자동 통과
+            true
         } else {
-            complementedWeak >= (weakOhaengs.size + 1) / 2  // 50% 이상 보완
+            complementedWeak >= (weakOhaengs.size + 1) / 2
         }
 
         return ScoreDetail(
@@ -401,19 +372,16 @@ class NameAnalyzer {
         val total = sajuEumYang.eumCount + sajuEumYang.yangCount
         if (total == 0) return ScoreDetail(0, 100, "사주 데이터 없음", false)
 
-        // 음양 비율 계산
         val ratio = minOf(sajuEumYang.eumCount, sajuEumYang.yangCount).toDouble() / total
 
-        // 점수 계산 (균형잡힌 비율일수록 높은 점수)
         val score = when {
-            ratio >= 0.4 -> 100  // 4:6 ~ 6:4 완벽한 균형
-            ratio >= 0.375 -> 90  // 3:5 ~ 5:3
-            ratio >= 0.25 -> 70   // 2:6 ~ 6:2
-            ratio >= 0.125 -> 50  // 1:7 ~ 7:1
-            else -> 30           // 0:8 ~ 8:0 극단적 불균형
+            ratio >= 0.4 -> 100
+            ratio >= 0.375 -> 90
+            ratio >= 0.25 -> 70
+            ratio >= 0.125 -> 50
+            else -> 30
         }
 
-        // isPassed: 음양이 2:6 이상의 비율이면 통과
         val isPassed = ratio >= 0.25
 
         val reason = "사주음양 - 음${sajuEumYang.eumCount}:양${sajuEumYang.yangCount} (${String.format("%.0f", ratio * 100)}:${String.format("%.0f", (1-ratio) * 100)})"
@@ -426,7 +394,6 @@ class NameAnalyzer {
         )
     }
 
-    // 음양 점수 계산 공통 메서드 - Pass/Fail 포함
     private fun calculateEumYangScoreWithPass(
         eumCount: Int,
         yangCount: Int,
@@ -437,7 +404,6 @@ class NameAnalyzer {
         val total = eumCount + yangCount
         if (total == 0) return ScoreDetail(0, 100, "$prefix 데이터 없음", false)
 
-        // 기존 점수 계산
         val ratio = minOf(eumCount, yangCount).toDouble() / total
         val ratioScore = when {
             ratio >= 0.4 -> 50
@@ -446,11 +412,9 @@ class NameAnalyzer {
             else -> 10
         }
 
-        // Pass/Fail 판정
         val isPassed = PassFailUtil.checkEumYangHarmony(arrangement, surnameLength)
 
         var arrayScore = 40
-        // 기존 배열 점수 계산...
 
         val totalScore = (ratioScore + arrayScore).coerceIn(0, 100)
 

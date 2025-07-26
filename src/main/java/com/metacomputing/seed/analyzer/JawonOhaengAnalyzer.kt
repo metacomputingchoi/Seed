@@ -1,4 +1,4 @@
-// analyzer/JawonOhaengAnalyzer.kt - NFC normalize 적용
+// analyzer/JawonOhaengAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
@@ -21,7 +21,6 @@ class JawonOhaengAnalyzer {
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
 
-            // NFC normalize 적용
             val sourceElement = normalizeString(hanjaInfo?.sourceElement ?: "土")
 
             val key = convertOhaengKey(sourceElement)

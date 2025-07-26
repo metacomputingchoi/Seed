@@ -1,3 +1,4 @@
+// model/NameBlock.kt
 package com.metacomputing.seed.model
 
 data class NameBlock(

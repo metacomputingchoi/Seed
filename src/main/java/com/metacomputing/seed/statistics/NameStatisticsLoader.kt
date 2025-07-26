@@ -7,7 +7,6 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import java.io.File
 
-// statistics/NameStatisticsLoader.kt
 class NameStatisticsLoader {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -51,18 +50,14 @@ class NameStatisticsLoader {
         }
     }
 
-    // 한자 조합이 유효한지 확인
     fun isValidHanjaCombination(givenName: String, givenNameHanja: String): Boolean {
-        val stats = nameStatistics[givenName] ?: return true  // 통계가 없으면 허용
+        val stats = nameStatistics[givenName] ?: return true
 
-        // hanja_combinations가 비어있으면 모든 조합 허용
         if (stats.hanjaCombinations.isEmpty()) return true
 
-        // hanja_combinations에 포함되어 있는지 확인
         return givenNameHanja in stats.hanjaCombinations
     }
 
-    // 특정 이름의 유효한 한자 조합 목록 가져오기
     fun getValidHanjaCombinations(givenName: String): List<String> {
         return nameStatistics[givenName]?.hanjaCombinations ?: emptyList()
     }

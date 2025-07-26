@@ -1,3 +1,4 @@
+// search/NameSearchEngine.kt
 package com.metacomputing.seed.search
 
 import com.metacomputing.seed.model.NameBlock
@@ -10,13 +11,12 @@ class NameSearchEngine(
     private val statsLoader: NameStatisticsLoader = NameStatisticsLoader()
 ) {
 
-    // 미리 모든 유효한 이름 조합을 메모리에 로드
     private val allValidNameCombinations: Set<NameCombination> by lazy {
         val combinations = mutableSetOf<NameCombination>()
         val stats = statsLoader.loadStatistics()
 
         stats.forEach { (givenName, nameStats) ->
-            // hanja_combinations가 있는 경우만 처리
+
             if (nameStats.hanjaCombinations.isNotEmpty()) {
                 nameStats.hanjaCombinations.forEach { hanja ->
                     if (hanja.length == givenName.length) {
@@ -24,7 +24,7 @@ class NameSearchEngine(
                     }
                 }
             }
-            // hanja_combinations가 비어있으면 그 이름은 제외
+
         }
 
         combinations
@@ -33,11 +33,9 @@ class NameSearchEngine(
     fun search(query: NameQuery): List<SearchResult> {
         val results = mutableListOf<SearchResult>()
 
-        // 성씨 후보 찾기
         val surnameCandidates = findSurnameCandidates(query.surnameBlocks)
         if (surnameCandidates.isEmpty()) return emptyList()
 
-        // 이름 블록이 없으면 빈 이름으로 처리
         if (query.nameBlocks.isEmpty()) {
             surnameCandidates.forEach { surname ->
                 results.add(SearchResult(
@@ -50,12 +48,10 @@ class NameSearchEngine(
             return results
         }
 
-        // 유효한 이름 조합 필터링
         val matchingNames = allValidNameCombinations.filter { combination ->
             matchesNameQuery(combination, query.nameBlocks)
         }
 
-        // 성씨와 이름 조합
         for (surname in surnameCandidates) {
             for (nameCombination in matchingNames) {
                 results.add(SearchResult(
@@ -71,10 +67,9 @@ class NameSearchEngine(
     }
 
     private fun matchesNameQuery(combination: NameCombination, blocks: List<NameBlock>): Boolean {
-        // 길이가 다르면 매치 안됨
+
         if (combination.korean.length != blocks.size) return false
 
-        // 각 블록과 매칭 확인
         return blocks.indices.all { index ->
             val block = blocks[index]
             val koreanChar = combination.korean[index].toString()
@@ -106,14 +101,13 @@ class NameSearchEngine(
     }
 
     private fun findSingleSurnameCandidates(block: NameBlock): List<SurnameCandidate> {
-        // 한글과 한자가 모두 채워져 있어야 함
+
         if (block.isKoreanEmpty || block.isHanjaEmpty) {
             return emptyList()
         }
 
         val key = "${block.korean}/${block.hanja}"
 
-        // 성씨 데이터베이스에 정확히 일치하는 경우만 반환
         return if (hanjaDB.isSurname(key)) {
             listOf(SurnameCandidate(block.korean, block.hanja))
         } else {
@@ -125,13 +119,12 @@ class NameSearchEngine(
         firstBlock: NameBlock,
         secondBlock: NameBlock
     ): List<SurnameCandidate> {
-        // 두 블록 모두 한글과 한자가 채워져 있어야 함
+
         if (firstBlock.isKoreanEmpty || firstBlock.isHanjaEmpty ||
             secondBlock.isKoreanEmpty || secondBlock.isHanjaEmpty) {
             return emptyList()
         }
 
-        // 각 블록이 1글자씩이어야 함
         if (firstBlock.korean.length != 1 || firstBlock.hanja.length != 1 ||
             secondBlock.korean.length != 1 || secondBlock.hanja.length != 1) {
             return emptyList()
@@ -139,7 +132,6 @@ class NameSearchEngine(
 
         val combinedKey = "${firstBlock.korean}${secondBlock.korean}/${firstBlock.hanja}${secondBlock.hanja}"
 
-        // 성씨 데이터베이스에 정확히 일치하는 경우만 반환
         return if (hanjaDB.isSurname(combinedKey)) {
             listOf(SurnameCandidate(
                 "${firstBlock.korean}${secondBlock.korean}",
@@ -196,13 +188,11 @@ class NameSearchEngine(
     }
 }
 
-// 이름 조합을 나타내는 data class
 data class NameCombination(
     val korean: String,
     val hanja: String
 )
 
-// 나머지 data class들
 data class CharCandidate(
     val korean: String,
     val hanja: String

@@ -1,3 +1,4 @@
+// Main.kt
 package com.metacomputing.seed
 
 import com.metacomputing.mcalendar.CalSDK
@@ -11,13 +12,12 @@ import com.metacomputing.seed.statistics.NameStatisticsLoader
 import com.metacomputing.seed.util.OhaengRelationUtil
 
 fun main() {
-    // 사주 정보: 1986년 4월 19일 5시 45분생 (UTC+9)
+
     val timePoint = CalSDK.getTimePointData(1986, 4, 19, 5, 45, -540, 0)
 
-    // 이름 검색 쿼리 예시
     val queries = listOf(
-        "[최/崔][성/成][수/秀]",  // 완전한 이름 평가
-        "[최/崔][_/_][_/_]"      // 성씨만 지정하여 검색
+        "[최/崔][성/成][수/秀]",
+        "[최/崔][_/_][_/_]"
     )
 
     queries.forEach { query ->
@@ -27,15 +27,13 @@ fun main() {
 }
 
 fun processAndDisplayResults(query: String, timePoint: TimePointResult) {
-    // 1. 이름 검색 및 평가
+
     val evaluations = searchAndEvaluateNames(query, timePoint)
     println("평가 완료: ${evaluations.size}개")
 
-    // 2. 필수 항목 통과 필터링
     val passedEvaluations = filterPassedNames(evaluations)
     println("필터링 후: ${passedEvaluations.size}개 (필수 항목 모두 통과)")
 
-    // 3. 결과 출력
     if (passedEvaluations.isEmpty()) {
         displayNoResultsMessage(evaluations)
     } else {
@@ -51,17 +49,15 @@ fun searchAndEvaluateNames(query: String, timePoint: TimePointResult): List<Pair
     val parsedQuery = parser.parse(query)
     val evaluations = mutableListOf<Pair<NameInput, NameEvaluation>>()
 
-    // 완전한 이름이 입력된 경우 바로 평가
     if (isCompleteQuery(parsedQuery)) {
         val nameInput = buildNameInput(parsedQuery, timePoint)
         evaluations.add(nameInput to analyzer.analyze(nameInput))
 
-        // 디버깅용 상세 출력 (특정 이름만)
         if (query.contains("[성/成][수/秀]")) {
             printDetailedDebugInfo(evaluations.first())
         }
     }
-    // 부분 검색인 경우 가능한 모든 조합 검색
+
     else {
         val searchEngine = NameSearchEngine(hanjaDB, NameStatisticsLoader())
         val searchResults = searchEngine.search(parsedQuery)
@@ -85,12 +81,12 @@ fun searchAndEvaluateNames(query: String, timePoint: TimePointResult): List<Pair
 fun filterPassedNames(evaluations: List<Pair<NameInput, NameEvaluation>>): List<Pair<NameInput, NameEvaluation>> {
     return evaluations.filter { (_, evaluation) ->
         val scores = evaluation.detailedScores
-        scores.sageokSuriScore.isPassed &&         // 사격수리: 4개 격 모두 양운수 이상
-                scores.sajuNameOhaengScore.isPassed &&     // 사주이름오행: 부족한 오행 보완
-                scores.hoeksuEumYangScore.isPassed &&      // 획수음양: 성 첫글자와 이름 끝글자 다름
-                scores.baleumOhaengScore.isPassed &&       // 발음오행: 상극 없음
-                scores.baleumEumYangScore.isPassed &&      // 발음음양: 성 첫글자와 이름 끝글자 다름
-                scores.sageokSuriOhaengScore.isPassed      // 사격수리오행: 상극 없음
+        scores.sageokSuriScore.isPassed &&
+                scores.sajuNameOhaengScore.isPassed &&
+                scores.hoeksuEumYangScore.isPassed &&
+                scores.baleumOhaengScore.isPassed &&
+                scores.baleumEumYangScore.isPassed &&
+                scores.sageokSuriOhaengScore.isPassed
     }
 }
 
@@ -105,7 +101,6 @@ fun displayTopRecommendations(evaluations: List<Pair<NameInput, NameEvaluation>>
                 "(${nameInput.surnameHanja}${nameInput.givenNameHanja}) - " +
                 "종합점수: ${evaluation.totalScore}점/100점")
 
-        // 1위만 상세 정보 표시
         if (index == 0) {
             printTopNameDetails(evaluation)
         }
@@ -121,7 +116,6 @@ fun displayTopRecommendations(evaluations: List<Pair<NameInput, NameEvaluation>>
 fun displayNoResultsMessage(evaluations: List<Pair<NameInput, NameEvaluation>>) {
     println("\n필수 항목을 모두 통과한 이름이 없습니다.")
 
-    // 실패 원인 분석 (샘플 1000개)
     if (evaluations.size > 1) {
         val sample = evaluations.take(minOf(1000, evaluations.size))
         val failureStats = analyzeFailureReasons(sample)
@@ -148,7 +142,6 @@ fun printTopNameDetails(evaluation: NameEvaluation) {
     println("    ├─ 획수오행: ${evaluation.hoeksuOhaeng.arrangement.joinToString("-")}")
     println("    └─ 발음오행: ${evaluation.baleumOhaeng.arrangement.joinToString("-")}")
 
-    // 획수오행 관계 분석
     val relations = evaluation.hoeksuOhaeng.arrangement.zipWithNext()
         .map { (first, second) -> OhaengRelationUtil.getDetailedRelation(first, second) }
     if (relations.isNotEmpty()) {
