@@ -2,25 +2,14 @@
 package com.metacomputing.seed.database
 
 import com.metacomputing.seed.model.StrokeData
-import kotlinx.serialization.json.Json
-import java.io.File
+import com.metacomputing.seed.util.ResourceLoader
 
 class StrokeMeaningDatabase {
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
-    private var strokeData: StrokeData? = null
-
-    init { loadStrokeData() }
-
-    private fun loadStrokeData() {
-        val resourcePath = "resources/seed/data/stroke_data.json"
-        val file = File(resourcePath)
-
-        strokeData = if (file.exists()) {
-            json.decodeFromString(StrokeData.serializer(), file.readText())
-        } else {
-            javaClass.classLoader.getResourceAsStream("seed/data/stroke_data.json")?.use { stream ->
-                json.decodeFromString(StrokeData.serializer(), stream.bufferedReader().use { it.readText() })
-            }
+    private val strokeData: StrokeData? by lazy {
+        try {
+            ResourceLoader.loadStrokeData("stroke_data.json")
+        } catch (e: Exception) {
+            null
         }
     }
 

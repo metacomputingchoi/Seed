@@ -2,15 +2,21 @@
 package com.metacomputing.seed.statistics
 
 import com.metacomputing.seed.model.*
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
-import java.io.File
+import com.metacomputing.seed.util.ResourceLoader
 import kotlin.math.roundToInt
 
 class NameStatisticsManager {
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
-    private val statistics by lazy { loadStatistics() }
+    private val statistics: Map<String, NameStatistics> by lazy {
+        try {
+            ResourceLoader.loadStatistics("name_to_stat_minified.json")
+        } catch (e: Exception) {
+            println("통계 파일 로드 실패: ${e.message}")
+            emptyMap()
+        }
+    }
+
+    fun loadStatistics() = statistics
+    fun getAllStatistics() = statistics
 
     fun getStatistics(givenName: String): NameStatisticsResult? {
         val stats = statistics[givenName] ?: return null
@@ -24,31 +30,15 @@ class NameStatisticsManager {
         )
     }
 
-    fun getAllStatistics() = statistics
-
-    private fun loadStatistics(): Map<String, NameStatistics> {
-        val resourcePath = "resources/seed/data/name_to_stat_minified.json"
-        val file = File(resourcePath)
-
-        return try {
-            val jsonString = if (file.exists()) {
-                file.readText()
-            } else {
-                javaClass.classLoader.getResourceAsStream("seed/data/name_to_stat_minified.json")
-                    ?.bufferedReader()?.use { it.readText() } ?: return emptyMap()
-            }
-
-            json.decodeFromString(
-                MapSerializer(String.serializer(), NameStatistics.serializer()),
-                jsonString
-            )
-        } catch (e: Exception) {
-            println("통계 파일 로드 실패: ${e.message}")
-            emptyMap()
-        }
+    fun isValidHanjaCombination(givenName: String, givenNameHanja: String): Boolean {
+        val stats = statistics[givenName] ?: return true
+        return stats.hanjaCombinations.isEmpty() || givenNameHanja in stats.hanjaCombinations
     }
 
-    private fun analyzePopularity(stats: NameStatistics): PopularityAnalysis {
+    fun getValidHanjaCombinations(givenName: String) =
+        statistics[givenName]?.hanjaCombinations ?: emptyList()
+
+    fun analyzePopularity(stats: NameStatistics): PopularityAnalysis {
         val ranks = stats.yearlyPopularityRank.total
 
         if (ranks.isEmpty()) {
@@ -65,7 +55,7 @@ class NameStatisticsManager {
         )
     }
 
-    private fun analyzeGenderDistribution(stats: NameStatistics): GenderDistribution {
+    fun analyzeGenderDistribution(stats: NameStatistics): GenderDistribution {
         val male = stats.yearlyBirthCount.male.values.sum()
         val female = stats.yearlyBirthCount.female.values.sum()
         val total = male + female
@@ -88,7 +78,7 @@ class NameStatisticsManager {
         return GenderDistribution(malePercent, femalePercent, characteristic)
     }
 
-    private fun analyzeBirthTrend(stats: NameStatistics): BirthTrend {
+    fun analyzeBirthTrend(stats: NameStatistics): BirthTrend {
         val births = stats.yearlyBirthCount.total
         val total = births.values.sum()
         val years = births.size
