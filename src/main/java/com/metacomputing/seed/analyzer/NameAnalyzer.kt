@@ -175,9 +175,8 @@ class NameAnalyzer {
         // 배열 상생상극 점수
         val arrayScore = OhaengRelationUtil.calculateArrayScore(sageokSuriOhaeng.arrangement) * 0.5
 
-        // 상극이 없으면 통과 (균형은 체크하지 않음)
-        val hasNoSangGeuk = !hasAnySangGeuk(sageokSuriOhaeng.arrangement)
-        val isPassed = hasNoSangGeuk  // 균형 체크 제거
+        // 더 엄격한 상극 체크
+        val isPassed = PassFailUtil.checkSageokSuriOhaeng(sageokSuriOhaeng.arrangement)
 
         val totalScore = (balanceScore + arrayScore).toInt()
 
@@ -188,7 +187,6 @@ class NameAnalyzer {
             isPassed = isPassed
         )
     }
-
     // 상극 체크 헬퍼 메서드 수정
     private fun hasAnySangGeuk(arrangement: List<String>): Boolean {
         for (i in 0 until arrangement.size - 1) {

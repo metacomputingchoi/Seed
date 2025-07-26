@@ -20,7 +20,37 @@ object OhaengRelationUtil {
     fun isSangGeuk(first: String, second: String): Boolean {
         val firstNum = ohaengToNumber[first] ?: return false
         val secondNum = ohaengToNumber[second] ?: return false
+
+        // 정상극: first가 second를 극한다
+        val isNormalGeuk = (firstNum + 2) % 5 == secondNum
+
+        // 역상극: second가 first를 극한다
+        val isReverseGeuk = (secondNum + 2) % 5 == firstNum
+
+        return isNormalGeuk || isReverseGeuk
+    }
+
+    // 더 명확한 상극 체크 메서드들
+    fun isNormalGeuk(first: String, second: String): Boolean {
+        val firstNum = ohaengToNumber[first] ?: return false
+        val secondNum = ohaengToNumber[second] ?: return false
         return (firstNum + 2) % 5 == secondNum
+    }
+
+    fun isReverseGeuk(first: String, second: String): Boolean {
+        val firstNum = ohaengToNumber[first] ?: return false
+        val secondNum = ohaengToNumber[second] ?: return false
+        return (secondNum + 2) % 5 == firstNum
+    }
+
+    fun getDetailedRelation(first: String, second: String): String {
+        return when {
+            first == second -> "동일"
+            isSangSaeng(first, second) -> "상생"
+            isNormalGeuk(first, second) -> "정상극(${first}극${second})"
+            isReverseGeuk(first, second) -> "역상극(${second}극${first})"
+            else -> "중립"
+        }
     }
 
     fun calculateArrayScore(arrangement: List<String>): Int {
