@@ -1,3 +1,4 @@
+// analyzer/SajuOhaengAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
@@ -12,7 +13,6 @@ class SajuOhaengAnalyzer {
             "수(水)" to 0
         )
 
-        // 천간의 오행 분석
         val stems = listOf(sajuInfo.yearStem, sajuInfo.monthStem, sajuInfo.dayStem, sajuInfo.hourStem)
         stems.forEach { stem ->
             val ohaeng = when(stem) {
@@ -26,7 +26,6 @@ class SajuOhaengAnalyzer {
             ohaengCount[ohaeng] = ohaengCount[ohaeng]!! + 1
         }
 
-        // 지지의 오행 분석
         val branches = listOf(sajuInfo.yearBranch, sajuInfo.monthBranch, sajuInfo.dayBranch, sajuInfo.hourBranch)
         branches.forEach { branch ->
             val ohaeng = when(branch) {

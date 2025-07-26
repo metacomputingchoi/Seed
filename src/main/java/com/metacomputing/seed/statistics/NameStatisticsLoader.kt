@@ -1,3 +1,4 @@
+// statistics/NameStatisticsLoader.kt
 package com.metacomputing.seed.statistics
 
 import com.metacomputing.seed.model.NameStatistics
@@ -24,7 +25,6 @@ class NameStatisticsLoader {
                     jsonString
                 )
             } else {
-                // 리소스에서 로드 시도
                 val resourceStream = this::class.java.classLoader.getResourceAsStream(
                     "seed/data/name_to_stat_minified.json"
                 )

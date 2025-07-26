@@ -1,3 +1,4 @@
+// database/StrokeMeaningDatabase.kt
 package com.metacomputing.seed.database
 
 import com.metacomputing.seed.model.StrokeData
@@ -26,7 +27,6 @@ class StrokeMeaningDatabase {
                 val jsonString = file.readText()
                 json.decodeFromString(StrokeData.serializer(), jsonString)
             } else {
-                // 리소스에서 로드
                 val resourceStream = this::class.java.classLoader.getResourceAsStream(
                     "seed/data/stroke_data.json"
                 )

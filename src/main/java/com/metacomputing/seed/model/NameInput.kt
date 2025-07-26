@@ -1,3 +1,4 @@
+// model/NameInput.kt
 package com.metacomputing.seed.model
 
 import com.metacomputing.mcalendar.CalSDK
@@ -30,7 +31,6 @@ data class NameInput(
             birthMinute: Int,
             timezoneOffset: Int
         ): NameInput {
-            // TimePointResult 계산
             val timePointResult = CalSDK.getTimePointData(
                 year = birthYear,
                 month = birthMonth,
@@ -38,10 +38,9 @@ data class NameInput(
                 hour = birthHour,
                 minute = birthMinute,
                 timezOffset = timezoneOffset,
-                lang = 0  // 0: 한국어
+                lang = 0
             )
 
-            // 생년월일시 문자열 생성
             val birthDateTime = String.format(
                 "%04d년 %02d월 %02d일 %02d시 %02d분",
                 birthYear, birthMonth, birthDay, birthHour, birthMinute

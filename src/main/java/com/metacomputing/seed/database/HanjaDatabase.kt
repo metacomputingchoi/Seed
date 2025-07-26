@@ -1,3 +1,4 @@
+// database/HanjaDatabase.kt
 package com.metacomputing.seed.database
 
 import com.metacomputing.seed.model.HanjaInfo
@@ -24,11 +25,8 @@ class HanjaDatabase {
 
     private fun loadHanjaData() {
         try {
-            // 한자 사전 로드
             loadHanjaDict()
-            // 한글→한자 매핑 로드
             loadKoreanToHanjaMapping()
-            // 한자→키 매핑 로드
             loadHanjaToKeysMapping()
         } catch (e: Exception) {
             println("한자 데이터 로드 실패: ${e.message}")
@@ -60,7 +58,6 @@ class HanjaDatabase {
     }
 
     private fun loadKoreanToHanjaMapping() {
-        // 한글→한자 매핑 로드 코드
         val resourcePath = "resources/seed/data/name_korean_to_hanja_dict_keys_mapping_effective.json"
         val file = File(resourcePath)
 
@@ -85,7 +82,6 @@ class HanjaDatabase {
     }
 
     private fun loadHanjaToKeysMapping() {
-        // 한자→키 매핑 로드 코드 (필요시)
     }
 
     fun getHanjaStrokes(korean: String, hanja: String, isSurname: Boolean = false): Int {
@@ -103,8 +99,8 @@ class HanjaDatabase {
             hanja = hanja,
             meaning = info.meaning,
             originalStrokes = info.strokes.toIntOrNull() ?: 10,
-            strokeElement = info.strokeElement,  // 획수오행
-            sourceElement = info.sourceElement,   // 자원오행
+            strokeElement = info.strokeElement,
+            sourceElement = info.sourceElement,
             soundOhaeng = BaleumAnalyzer.calculateBaleumOhaeng(korean),
             soundEumyang = BaleumAnalyzer.calculateSoundEumyang(korean),
             strokeEumyang = BaleumAnalyzer.calculateStrokeEumyang(
@@ -114,9 +110,7 @@ class HanjaDatabase {
     }
 
     fun getSurnamePairs(surname: String, surnameHanja: String): List<String> {
-        // 복성 처리
         if (surname.length > 1) {
-            // 복성인 경우 각 글자로 분리
             val pairs = mutableListOf<String>()
             surname.forEachIndexed { index, char ->
                 val hanjaChar = surnameHanja.getOrNull(index)?.toString() ?: ""
@@ -125,7 +119,6 @@ class HanjaDatabase {
             return pairs
         }
 
-        // 단성인 경우
         return listOf("$surname/$surnameHanja")
     }
 
@@ -154,15 +147,14 @@ class HanjaDatabase {
     }
 }
 
-// 새로운 상세 정보 데이터 클래스
 data class HanjaDetailedInfo(
     val korean: String,
     val hanja: String,
     val meaning: String,
     val originalStrokes: Int,
-    val strokeElement: String,    // 획수오행 (stroke_element 사용)
-    val sourceElement: String,    // 자원오행 (source_element 사용)
-    val soundOhaeng: String,       // 발음오행
-    val soundEumyang: Int,        // 발음음양
-    val strokeEumyang: Int        // 획수음양
+    val strokeElement: String,
+    val sourceElement: String,
+    val soundOhaeng: String,
+    val soundEumyang: Int,
+    val strokeEumyang: Int
 )

@@ -1,3 +1,4 @@
+// analyzer/SageokSuriOhaengAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
@@ -14,19 +15,16 @@ class SageokSuriOhaengAnalyzer {
 
         val arrangement = mutableListOf<String>()
 
-        // 이격의 오행 (끝자리로 계산)
         val iLastDigit = sageokSuri.iGyeok % 10
         val iOhaeng = getOhaengByLastDigit(iLastDigit)
         ohaengCount[iOhaeng] = ohaengCount[iOhaeng]!! + 1
-        arrangement.add(iOhaeng.substring(0, 1))  // "목(木)" -> "목"
+        arrangement.add(iOhaeng.substring(0, 1))
 
-        // 형격의 오행 (끝자리로 계산)
         val hyeongLastDigit = sageokSuri.hyeongGyeok % 10
         val hyeongOhaeng = getOhaengByLastDigit(hyeongLastDigit)
         ohaengCount[hyeongOhaeng] = ohaengCount[hyeongOhaeng]!! + 1
         arrangement.add(hyeongOhaeng.substring(0, 1))
 
-        // 원격의 오행 (끝자리로 계산)
         val wonLastDigit = sageokSuri.wonGyeok % 10
         val wonOhaeng = getOhaengByLastDigit(wonLastDigit)
         ohaengCount[wonOhaeng] = ohaengCount[wonOhaeng]!! + 1
@@ -34,7 +32,7 @@ class SageokSuriOhaengAnalyzer {
 
         return SageokSuriOhaeng(
             ohaengDistribution = ohaengCount,
-            arrangement = arrangement  // 이격-형격-원격 순서
+            arrangement = arrangement
         )
     }
 

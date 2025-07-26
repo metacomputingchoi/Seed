@@ -1,3 +1,4 @@
+// model/HanjaData.kt
 package com.metacomputing.seed.model
 
 import kotlinx.serialization.Serializable
@@ -15,7 +16,7 @@ data class HanjaInfo(
     val meaning: String,
 
     @SerialName("strokes")
-    val strokes: String,  // 원획수
+    val strokes: String,
 
     @SerialName("stroke_element")
     val strokeElement: String,
@@ -24,5 +25,5 @@ data class HanjaInfo(
     val radical: String,
 
     @SerialName("source_element")
-    val sourceElement: String  // 자원오행
+    val sourceElement: String
 )

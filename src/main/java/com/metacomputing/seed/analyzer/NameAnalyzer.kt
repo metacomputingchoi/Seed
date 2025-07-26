@@ -1,3 +1,4 @@
+// analyzer/NameAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
@@ -18,10 +19,8 @@ class NameAnalyzer {
     private val jawonOhaengAnalyzer = JawonOhaengAnalyzer()
 
     fun analyze(nameInput: NameInput): NameEvaluation {
-        // 사주 정보 추출 (이미 NameInput에 포함됨)
         val sajuInfo = sajuAnalyzer.extractSajuInfo(nameInput.timePointResult)
 
-        // 각 분석 수행
         val sageokSuri = sageokSuriAnalyzer.analyze(nameInput)
         val sageokSuriOhaeng = sageokSuriOhaengAnalyzer.analyze(sageokSuri)
         val sageokSuriEumYang = sageokSuriEumYangAnalyzer.analyze(sageokSuri)
@@ -34,7 +33,6 @@ class NameAnalyzer {
         val sajuNameOhaeng = sajuNameOhaengAnalyzer.analyze(sajuOhaeng, hoeksuOhaeng, nameInput)
         val jawonOhaeng = jawonOhaengAnalyzer.analyze(nameInput)
 
-        // 종합 점수 계산
         val totalScore = calculateTotalScore(
             sageokSuri, sageokSuriOhaeng, sageokSuriEumYang,
             sajuOhaeng, sajuEumYang, hoeksuOhaeng, hoeksuEumYang,
@@ -70,17 +68,14 @@ class NameAnalyzer {
         sajuNameOhaeng: SajuNameOhaeng,
         jawonOhaeng: JawonOhaeng
     ): Int {
-        var score = 50  // 기본 점수
+        var score = 50
 
-        // 사격수리 점수 계산 (40점)
         val sageokScore = calculateSageokScore(sageokSuri)
         score += sageokScore
 
-        // 오행 균형 점수 (30점)
         val ohaengScore = calculateOhaengBalanceScore(sajuNameOhaeng, hoeksuOhaeng, baleumOhaeng)
         score += ohaengScore
 
-        // 음양 균형 점수 (30점)
         val eumyangScore = calculateEumYangBalanceScore(sajuEumYang, hoeksuEumYang, baleumEumYang)
         score += eumyangScore
 
@@ -90,7 +85,6 @@ class NameAnalyzer {
     private fun calculateSageokScore(sageokSuri: SageokSuri): Int {
         var score = 0
 
-        // 각 격의 길흉에 따른 점수
         if (sageokSuri.wonGyeokFortune.contains("상운수") || sageokSuri.wonGyeokFortune.contains("대길")) score += 10
         else if (sageokSuri.wonGyeokFortune.contains("길")) score += 5
 
@@ -111,16 +105,15 @@ class NameAnalyzer {
         hoeksuOhaeng: HoeksuOhaeng,
         baleumOhaeng: BaleumOhaeng
     ): Int {
-        // 사주이름오행의 균형을 평가
         val distribution = sajuNameOhaeng.ohaengDistribution.values
         val max = distribution.maxOrNull() ?: 0
         val min = distribution.minOrNull() ?: 0
 
         return when (max - min) {
-            0, 1, 2 -> 30  // 매우 균형
-            3, 4 -> 20     // 균형
-            5, 6 -> 10     // 약간 불균형
-            else -> 0      // 불균형
+            0, 1, 2 -> 30
+            3, 4 -> 20
+            5, 6 -> 10
+            else -> 0
         }
     }
 
@@ -129,16 +122,15 @@ class NameAnalyzer {
         hoeksuEumYang: HoeksuEumYang,
         baleumEumYang: BaleumEumYang
     ): Int {
-        // 전체 음양의 균형을 평가
         val totalEum = sajuEumYang.eumCount + hoeksuEumYang.eumCount + baleumEumYang.eumCount
         val totalYang = sajuEumYang.yangCount + hoeksuEumYang.yangCount + baleumEumYang.yangCount
         val diff = kotlin.math.abs(totalEum - totalYang)
 
         return when (diff) {
-            0, 1, 2 -> 30  // 매우 균형
-            3, 4 -> 20     // 균형
-            5, 6 -> 10     // 약간 불균형
-            else -> 0      // 불균형
+            0, 1, 2 -> 30
+            3, 4 -> 20
+            5, 6 -> 10
+            else -> 0
         }
     }
 }

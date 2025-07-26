@@ -1,3 +1,4 @@
+// util/BaleumAnalyzer.kt
 package com.metacomputing.seed.util
 
 object BaleumAnalyzer {
@@ -22,9 +23,8 @@ object BaleumAnalyzer {
         }
     }
 
-    // 발음음양 계산 (초성과 중성 고려)
     fun calculateSoundEumyang(korean: String): Int {
-        if (korean.isEmpty()) return 0  // 음
+        if (korean.isEmpty()) return 0
 
         val jungsung = extractJungsung(korean.first())
         val jungsungYang = when (jungsung) {

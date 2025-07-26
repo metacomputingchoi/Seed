@@ -1,4 +1,4 @@
-// BaleumOhaengAnalyzer.kt
+// analyzer/BaleumOhaengAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
@@ -19,14 +19,13 @@ class BaleumOhaengAnalyzer {
 
         val arrangement = mutableListOf<String>()
 
-        // 성씨 발음 오행 분석
         val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
 
         surnamePairs.forEach { pair ->
             val parts = pair.split("/")
             if (parts.size == 2) {
                 val hanjaInfo = hanjaDB.getHanjaInfo(parts[0], parts[1], true)
-                val ohaeng = hanjaInfo?.soundOhaeng ?: "土"  // soundOhaeng 사용
+                val ohaeng = hanjaInfo?.soundOhaeng ?: "土"
 
                 val key = convertOhaengKey(ohaeng)
                 ohaengCount[key] = ohaengCount[key]!! + 1
@@ -34,11 +33,10 @@ class BaleumOhaengAnalyzer {
             }
         }
 
-        // 이름 발음 오행 분석
         nameInput.givenName.forEachIndexed { index, char ->
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
-            val ohaeng = hanjaInfo?.soundOhaeng ?: "土"  // soundOhaeng 사용
+            val ohaeng = hanjaInfo?.soundOhaeng ?: "土"
 
             val key = convertOhaengKey(ohaeng)
             ohaengCount[key] = ohaengCount[key]!! + 1

@@ -1,4 +1,4 @@
-// SajuNameOhaengAnalyzer.kt
+// analyzer/SajuNameOhaengAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
@@ -10,16 +10,13 @@ class SajuNameOhaengAnalyzer {
     fun analyze(sajuOhaeng: SajuOhaeng, hoeksuOhaeng: HoeksuOhaeng, nameInput: NameInput): SajuNameOhaeng {
         val combinedOhaeng = mutableMapOf<String, Int>()
 
-        // 사주 오행 복사
         sajuOhaeng.ohaengDistribution.forEach { (key, value) ->
             combinedOhaeng[key] = value
         }
 
-        // 성씨를 제외한 이름의 획수 오행만 추가
         val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
         val surnameCount = surnamePairs.size
 
-        // 성씨 부분을 제외한 이름 부분의 오행만 추가
         nameInput.givenName.forEachIndexed { index, char ->
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)

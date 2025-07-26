@@ -1,3 +1,4 @@
+// analyzer/SajuEumYangAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
@@ -7,7 +8,6 @@ class SajuEumYangAnalyzer {
         var eumCount = 0
         var yangCount = 0
 
-        // 천간의 음양 (갑병무경임=양, 을정기신계=음)
         val yangStems = setOf("甲", "丙", "戊", "庚", "壬")
         val eumStems = setOf("乙", "丁", "己", "辛", "癸")
 
@@ -19,7 +19,6 @@ class SajuEumYangAnalyzer {
             }
         }
 
-        // 지지의 음양 (자인진오신술=양, 축묘사미유해=음)
         val yangBranches = setOf("子", "寅", "辰", "午", "申", "戌")
         val eumBranches = setOf("丑", "卯", "巳", "未", "酉", "亥")
 

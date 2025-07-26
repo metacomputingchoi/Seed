@@ -1,3 +1,4 @@
+// model/SajuInfo.kt
 package com.metacomputing.seed.model
 
 data class SajuInfo(

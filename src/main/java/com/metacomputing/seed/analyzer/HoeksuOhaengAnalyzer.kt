@@ -1,4 +1,4 @@
-// HoeksuOhaengAnalyzer.kt
+// analyzer/HoeksuOhaengAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
@@ -19,7 +19,6 @@ class HoeksuOhaengAnalyzer {
 
         val arrangement = mutableListOf<String>()
 
-        // 성씨 한자 분석
         val surnamePairs = hanjaDB.getSurnamePairs(nameInput.surname, nameInput.surnameHanja)
         surnamePairs.forEach { pair ->
             val parts = pair.split("/")
@@ -32,7 +31,6 @@ class HoeksuOhaengAnalyzer {
             }
         }
 
-        // 이름 한자 분석
         nameInput.givenName.forEachIndexed { index, char ->
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)

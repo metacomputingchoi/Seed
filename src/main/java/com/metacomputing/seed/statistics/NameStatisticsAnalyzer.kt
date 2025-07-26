@@ -1,3 +1,4 @@
+// statistics/NameStatisticsAnalyzer.kt
 package com.metacomputing.seed.statistics
 
 import com.metacomputing.seed.model.*
@@ -18,13 +19,10 @@ class NameStatisticsAnalyzer {
             )
         }
 
-        // 최고 순위 찾기 (낮은 숫자가 높은 순위)
         val bestEntry = allRanks.minByOrNull { it.value }!!
 
-        // 최근 순위 찾기
         val recentEntry = allRanks.maxByOrNull { it.key }!!
 
-        // 추세 분석
         val trend = analyzeTrend(allRanks)
 
         return PopularityAnalysis(
@@ -101,7 +99,7 @@ class NameStatisticsAnalyzer {
         val recentValues = recentYears.map { yearlyData[it]!! }
 
         return when {
-            recentValues.zipWithNext().all { (a, b) -> a > b } -> "상승"  // 순위가 낮아짐 = 인기 상승
+            recentValues.zipWithNext().all { (a, b) -> a > b } -> "상승"
             recentValues.zipWithNext().all { (a, b) -> a < b } -> "하락"
             recentValues.maxOrNull()!! - recentValues.minOrNull()!! < 100 -> "유지"
             else -> "변동"

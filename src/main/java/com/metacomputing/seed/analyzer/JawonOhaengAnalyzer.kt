@@ -1,3 +1,4 @@
+// analyzer/JawonOhaengAnalyzer.kt
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
@@ -15,7 +16,6 @@ class JawonOhaengAnalyzer {
             "수(水)" to 0
         )
 
-        // 이름에서만 자원오행 추출 (성씨 제외)
         nameInput.givenName.forEachIndexed { index, char ->
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
