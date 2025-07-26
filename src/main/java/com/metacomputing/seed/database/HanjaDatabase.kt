@@ -8,6 +8,7 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import java.io.File
+import java.text.Normalizer
 
 class HanjaDatabase {
     private val json = Json {
@@ -68,7 +69,7 @@ class HanjaDatabase {
         val resourcePath = "resources/seed/data/name_char_hanja_dict_effective.json"
         val file = File(resourcePath)
 
-        hanjaDict = if (file.exists()) {
+        val rawHanjaDict = if (file.exists()) {
             val jsonString = file.readText()
             json.decodeFromString(
                 MapSerializer(String.serializer(), HanjaInfo.serializer()),
@@ -85,6 +86,21 @@ class HanjaDatabase {
                     jsonString
                 )
             } ?: emptyMap()
+        }
+
+        // 로드 후 모든 키와 값들을 normalize
+        hanjaDict = rawHanjaDict.mapKeys { (key, _) ->
+            Normalizer.normalize(key, Normalizer.Form.NFC)
+        }.mapValues { (_, value) ->
+            value.copy(
+                charKo = Normalizer.normalize(value.charKo, Normalizer.Form.NFC),
+                hanja = Normalizer.normalize(value.hanja, Normalizer.Form.NFC),
+                meaning = Normalizer.normalize(value.meaning, Normalizer.Form.NFC),
+                strokes = value.strokes, // 숫자 문자열이므로 그대로
+                strokeElement = Normalizer.normalize(value.strokeElement, Normalizer.Form.NFC),
+                radical = Normalizer.normalize(value.radical, Normalizer.Form.NFC),
+                sourceElement = Normalizer.normalize(value.sourceElement, Normalizer.Form.NFC)
+            )
         }
     }
 

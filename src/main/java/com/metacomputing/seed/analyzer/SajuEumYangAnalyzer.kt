@@ -2,6 +2,7 @@
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
+import java.text.Normalizer
 
 class SajuEumYangAnalyzer {
     fun analyze(sajuInfo: SajuInfo): SajuEumYang {
@@ -13,9 +14,10 @@ class SajuEumYangAnalyzer {
 
         val stems = listOf(sajuInfo.yearStem, sajuInfo.monthStem, sajuInfo.dayStem, sajuInfo.hourStem)
         stems.forEach { stem ->
+            val normalizedStem = Normalizer.normalize(stem, Normalizer.Form.NFC)
             when {
-                yangStems.contains(stem) -> yangCount++
-                eumStems.contains(stem) -> eumCount++
+                yangStems.contains(normalizedStem) -> yangCount++
+                eumStems.contains(normalizedStem) -> eumCount++
             }
         }
 
@@ -24,9 +26,10 @@ class SajuEumYangAnalyzer {
 
         val branches = listOf(sajuInfo.yearBranch, sajuInfo.monthBranch, sajuInfo.dayBranch, sajuInfo.hourBranch)
         branches.forEach { branch ->
+            val normalizedBranch = Normalizer.normalize(branch, Normalizer.Form.NFC)
             when {
-                yangBranches.contains(branch) -> yangCount++
-                eumBranches.contains(branch) -> eumCount++
+                yangBranches.contains(normalizedBranch) -> yangCount++
+                eumBranches.contains(normalizedBranch) -> eumCount++
             }
         }
 

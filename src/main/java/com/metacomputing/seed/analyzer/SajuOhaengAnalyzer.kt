@@ -2,6 +2,7 @@
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
+import java.text.Normalizer
 
 class SajuOhaengAnalyzer {
     fun analyze(sajuInfo: SajuInfo): SajuOhaeng {
@@ -15,7 +16,8 @@ class SajuOhaengAnalyzer {
 
         val stems = listOf(sajuInfo.yearStem, sajuInfo.monthStem, sajuInfo.dayStem, sajuInfo.hourStem)
         stems.forEach { stem ->
-            val ohaeng = when(stem) {
+            val normalizedStem = Normalizer.normalize(stem, Normalizer.Form.NFC)
+            val ohaeng = when(normalizedStem) {
                 "甲", "乙" -> "목(木)"
                 "丙", "丁" -> "화(火)"
                 "戊", "己" -> "토(土)"
@@ -28,7 +30,8 @@ class SajuOhaengAnalyzer {
 
         val branches = listOf(sajuInfo.yearBranch, sajuInfo.monthBranch, sajuInfo.dayBranch, sajuInfo.hourBranch)
         branches.forEach { branch ->
-            val ohaeng = when(branch) {
+            val normalizedBranch = Normalizer.normalize(branch, Normalizer.Form.NFC)
+            val ohaeng = when(normalizedBranch) {
                 "子" -> "수(水)"
                 "丑" -> "토(土)"
                 "寅", "卯" -> "목(木)"

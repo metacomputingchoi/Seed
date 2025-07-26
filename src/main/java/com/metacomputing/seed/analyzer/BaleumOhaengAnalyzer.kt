@@ -66,7 +66,8 @@ class BaleumOhaengAnalyzer {
     }
 
     private fun convertToKorean(ohaeng: String): String {
-        return when(ohaeng) {
+        val normalized = Normalizer.normalize(ohaeng, Normalizer.Form.NFC)
+        return when(normalized) {
             "木" -> "목"
             "火" -> "화"
             "土" -> "토"
