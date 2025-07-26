@@ -1,19 +1,14 @@
 // Main.kt
 package com.metacomputing.seed
 
-import com.metacomputing.mcalendar.CalSDK
-import com.metacomputing.mcalendar.TimePointResult
-import com.metacomputing.seed.analyzer.NameAnalyzer
-import com.metacomputing.seed.model.*
-import com.metacomputing.seed.database.HanjaDatabase
-import com.metacomputing.seed.search.NameQueryParser
-import com.metacomputing.seed.search.NameSearchEngine
-import com.metacomputing.seed.statistics.NameStatisticsLoader
-import com.metacomputing.seed.util.OhaengRelationUtil
-
 fun main() {
-
-    val timePoint = CalSDK.getTimePointData(1986, 4, 19, 5, 45, -540, 0)
+    val birthInfo = BirthInfo(
+        year = 1986,
+        month = 4,
+        day = 19,
+        hour = 5,
+        minute = 45
+    )
 
     val queries = listOf(
         "[최/崔][성/成][수/秀]",
@@ -22,108 +17,93 @@ fun main() {
 
     queries.forEach { query ->
         println("\n=== 입력: $query ===")
-        processAndDisplayResults(query, timePoint)
+        processAndDisplayResults(query, birthInfo)
     }
 }
 
-fun processAndDisplayResults(query: String, timePoint: TimePointResult) {
+fun processAndDisplayResults(query: String, birthInfo: BirthInfo) {
+    // 완전한 이름인지 검색 패턴인지 확인
+    val isCompleteQuery = query.count { it == '[' } == query.count { it == ']' } &&
+            !query.contains("_")
 
-    val evaluations = searchAndEvaluateNames(query, timePoint)
-    println("평가 완료: ${evaluations.size}개")
-
-    val passedEvaluations = filterPassedNames(evaluations)
-    println("필터링 후: ${passedEvaluations.size}개 (필수 항목 모두 통과)")
-
-    if (passedEvaluations.isEmpty()) {
-        displayNoResultsMessage(evaluations)
-    } else {
-        displayTopRecommendations(passedEvaluations)
-    }
-}
-
-fun searchAndEvaluateNames(query: String, timePoint: TimePointResult): List<Pair<NameInput, NameEvaluation>> {
-    val hanjaDB = HanjaDatabase()
-    val parser = NameQueryParser(hanjaDB)
-    val analyzer = NameAnalyzer()
-
-    val parsedQuery = parser.parse(query)
-    val evaluations = mutableListOf<Pair<NameInput, NameEvaluation>>()
-
-    if (isCompleteQuery(parsedQuery)) {
-        val nameInput = buildNameInput(parsedQuery, timePoint)
-        evaluations.add(nameInput to analyzer.analyze(nameInput))
-
-        if (query.contains("[성/成][수/秀]")) {
-            printDetailedDebugInfo(evaluations.first())
-        }
-    }
-
-    else {
-        val searchEngine = NameSearchEngine(hanjaDB, NameStatisticsLoader())
-        val searchResults = searchEngine.search(parsedQuery)
-        println("검색된 이름: ${searchResults.size}개")
-
-        searchResults.forEach { result ->
-            val nameInput = NameInput(
-                surname = result.surname,
-                surnameHanja = result.surnameHanja,
-                givenName = result.givenName,
-                givenNameHanja = result.givenNameHanja,
-                timePointResult = timePoint
+    if (isCompleteQuery) {
+        // 완전한 이름 평가
+        val parsed = parseCompleteQuery(query)
+        if (parsed != null) {
+            val result = Seed.evaluateName(
+                surname = parsed.surname,
+                surnameHanja = parsed.surnameHanja,
+                givenName = parsed.givenName,
+                givenNameHanja = parsed.givenNameHanja,
+                year = birthInfo.year,
+                month = birthInfo.month,
+                day = birthInfo.day,
+                hour = birthInfo.hour,
+                minute = birthInfo.minute
             )
-            evaluations.add(nameInput to analyzer.analyze(nameInput))
+
+            println("평가 완료: 1개")
+
+            if (result.isPassed) {
+                println("필터링 후: 1개 (필수 항목 모두 통과)")
+                displaySingleResult(result)
+            } else {
+                println("필터링 후: 0개 (필수 항목 모두 통과)")
+                displayFailureDetails(result)
+            }
+
+            if (query.contains("[성/成][수/秀]")) {
+                printDetailedDebugInfo(result)
+            }
         }
-    }
-
-    return evaluations
-}
-
-fun filterPassedNames(evaluations: List<Pair<NameInput, NameEvaluation>>): List<Pair<NameInput, NameEvaluation>> {
-    return evaluations.filter { (_, evaluation) ->
-        val scores = evaluation.detailedScores
-        scores.sageokSuriScore.isPassed &&
-                scores.sajuNameOhaengScore.isPassed &&
-                scores.hoeksuEumYangScore.isPassed &&
-                scores.baleumOhaengScore.isPassed &&
-                scores.baleumEumYangScore.isPassed &&
-                scores.sageokSuriOhaengScore.isPassed
+    } else {
+        val searchResults = Seed.searchNames(
+            query = query,
+            year = birthInfo.year,
+            month = birthInfo.month,
+            day = birthInfo.day,
+            hour = birthInfo.hour,
+            minute = birthInfo.minute,
+            limit = 10000000
+        )
+        println("\n- 필터된 이름 수: ${searchResults.size}")
+        displayTopRecommendations(searchResults.take(10))
     }
 }
 
-fun displayTopRecommendations(evaluations: List<Pair<NameInput, NameEvaluation>>) {
-    val top10 = evaluations.sortedByDescending { it.second.totalScore }.take(10)
+fun displaySingleResult(result: NameEvaluationResult) {
+    println("\n【 평가 결과 】")
+    println("─".repeat(80))
+    println("${result.fullName} (${result.fullNameHanja}) - 종합점수: ${result.totalScore}점/100점")
+    printNameDetails(result)
+    println("─".repeat(80))
+}
 
-    println("\n【 상위 10개 추천 이름 】")
+fun displayTopRecommendations(results: List<NameEvaluationResult>) {
+    println("\n【 상위 ${results.size}개 추천 이름 】")
     println("─".repeat(80))
 
-    top10.forEachIndexed { index, (nameInput, evaluation) ->
-        println("${index + 1}위. ${nameInput.surname}${nameInput.givenName} " +
-                "(${nameInput.surnameHanja}${nameInput.givenNameHanja}) - " +
-                "종합점수: ${evaluation.totalScore}점/100점")
+    results.forEachIndexed { index, result ->
+        println("${index + 1}위. ${result.fullName} " +
+                "(${result.fullNameHanja}) - " +
+                "종합점수: ${result.totalScore}점/100점")
 
         if (index == 0) {
-            printTopNameDetails(evaluation)
+            printNameDetails(result)
         }
     }
 
     println("─".repeat(80))
-    println("\n【 분석 통계 】")
-    println("- 전체 평가: ${evaluations.size}개")
-    val passRate = evaluations.size.toDouble() / evaluations.size * 100
-    println("- 통과율: ${String.format("%.1f", passRate)}%")
 }
 
-fun displayNoResultsMessage(evaluations: List<Pair<NameInput, NameEvaluation>>) {
-    println("\n필수 항목을 모두 통과한 이름이 없습니다.")
+fun displayFailureDetails(result: NameEvaluationResult) {
+    println("\n【 평가 결과 - 불합격 】")
+    println("─".repeat(80))
+    println("${result.fullName} (${result.fullNameHanja}) - 종합점수: ${result.totalScore}점/100점")
 
-    if (evaluations.size > 1) {
-        val sample = evaluations.take(minOf(1000, evaluations.size))
-        val failureStats = analyzeFailureReasons(sample)
-
-        println("\n【 실패 원인 분석 (샘플 ${sample.size}개) 】")
-        failureStats.forEach { (item, count) ->
-            println("- $item 불통과: ${count}개 (${count * 100 / sample.size}%)")
-        }
+    println("\n【 불합격 사유 】")
+    result.scores.filter { !it.value.passed }.forEach { (name, score) ->
+        println("- $name: ✗ - ${score.reason}")
     }
 
     println("\n【 필수 통과 기준 】")
@@ -135,59 +115,91 @@ fun displayNoResultsMessage(evaluations: List<Pair<NameInput, NameEvaluation>>) 
     println("- 사격수리오행: 상극 없는 배열")
 }
 
-fun printTopNameDetails(evaluation: NameEvaluation) {
-    println("    ├─ 사주오행: ${evaluation.sajuOhaeng.ohaengDistribution}")
-    println("    ├─ 자원오행: ${evaluation.jawonOhaeng.ohaengDistribution}")
-    println("    ├─ 사주+이름오행: ${evaluation.sajuNameOhaeng.ohaengDistribution}")
-    println("    ├─ 획수오행: ${evaluation.hoeksuOhaeng.arrangement.joinToString("-")}")
-    println("    └─ 발음오행: ${evaluation.baleumOhaeng.arrangement.joinToString("-")}")
+fun printNameDetails(result: NameEvaluationResult) {
+    val details = result.details
+    println("    ├─ 사주오행: ${details.sajuOhaeng.ohaengDistribution}")
+    println("    ├─ 자원오행: ${details.jawonOhaeng.ohaengDistribution}")
+    println("    ├─ 사주+이름오행: ${details.sajuNameOhaeng.ohaengDistribution}")
+    println("    ├─ 획수오행: ${details.hoeksuOhaeng.arrangement.joinToString("-")}")
+    println("    └─ 발음오행: ${details.baleumOhaeng.arrangement.joinToString("-")}")
 
-    val relations = evaluation.hoeksuOhaeng.arrangement.zipWithNext()
-        .map { (first, second) -> OhaengRelationUtil.getDetailedRelation(first, second) }
+    val relations = details.hoeksuOhaeng.arrangement.zipWithNext()
+        .map { (first, second) -> getDetailedRelation(first, second) }
     if (relations.isNotEmpty()) {
         println("       └─ 관계: ${relations.joinToString(" → ")}")
     }
 }
 
-fun printDetailedDebugInfo(evaluation: Pair<NameInput, NameEvaluation>) {
-    val (nameInput, eval) = evaluation
-    println("\n【 디버깅: ${nameInput.surname}${nameInput.givenName} 】")
+fun printDetailedDebugInfo(result: NameEvaluationResult) {
+    println("\n【 디버깅: ${result.fullName} 】")
 
-    val scores = eval.detailedScores
-    listOf(
-        "사격수리" to scores.sageokSuriScore,
-        "사주이름오행" to scores.sajuNameOhaengScore,
-        "획수음양" to scores.hoeksuEumYangScore,
-        "발음오행" to scores.baleumOhaengScore,
-        "발음음양" to scores.baleumEumYangScore,
-        "사격수리오행" to scores.sageokSuriOhaengScore
-    ).forEach { (name, score) ->
-        println("$name: ${if (score.isPassed) "✓" else "✗"} - ${score.reason}")
+    result.scores.forEach { (name, score) ->
+        println("$name: ${if (score.passed) "✓" else "✗"} - ${score.reason}")
     }
 }
 
-fun analyzeFailureReasons(sample: List<Pair<NameInput, NameEvaluation>>): Map<String, Int> {
-    return mapOf(
-        "사격수리" to sample.count { !it.second.detailedScores.sageokSuriScore.isPassed },
-        "사주이름오행" to sample.count { !it.second.detailedScores.sajuNameOhaengScore.isPassed },
-        "획수음양" to sample.count { !it.second.detailedScores.hoeksuEumYangScore.isPassed },
-        "발음오행" to sample.count { !it.second.detailedScores.baleumOhaengScore.isPassed },
-        "발음음양" to sample.count { !it.second.detailedScores.baleumEumYangScore.isPassed },
-        "사격수리오행" to sample.count { !it.second.detailedScores.sageokSuriOhaengScore.isPassed }
-    )
+fun parseCompleteQuery(query: String): ParsedName? {
+    val pattern = """\[([^/]+)/([^/]+)\]""".toRegex()
+    val matches = pattern.findAll(query).toList()
+
+    if (matches.size < 2) return null
+
+    val surnameMatch = matches[0]
+    val surname = surnameMatch.groupValues[1]
+    val surnameHanja = surnameMatch.groupValues[2]
+
+    val givenNameMatches = matches.drop(1)
+    val givenName = givenNameMatches.joinToString("") { it.groupValues[1] }
+    val givenNameHanja = givenNameMatches.joinToString("") { it.groupValues[2] }
+
+    return ParsedName(surname, surnameHanja, givenName, givenNameHanja)
 }
 
-fun isCompleteQuery(query: NameQuery): Boolean {
-    return query.surnameBlocks.all { !it.isKoreanEmpty && !it.isHanjaEmpty } &&
-            query.nameBlocks.all { !it.isKoreanEmpty && !it.isHanjaEmpty }
+fun getDetailedRelation(first: String, second: String): String {
+    val ohaengToNumber = mapOf(
+        "목" to 0, "화" to 1, "토" to 2, "금" to 3, "수" to 4
+    )
+
+    fun isSangSaeng(a: String, b: String): Boolean {
+        val aNum = ohaengToNumber[a] ?: return false
+        val bNum = ohaengToNumber[b] ?: return false
+        return (aNum + 1) % 5 == bNum
+    }
+
+    fun isNormalGeuk(a: String, b: String): Boolean {
+        val aNum = ohaengToNumber[a] ?: return false
+        val bNum = ohaengToNumber[b] ?: return false
+        return (aNum + 2) % 5 == bNum
+    }
+
+    fun isReverseGeuk(a: String, b: String): Boolean {
+        val aNum = ohaengToNumber[a] ?: return false
+        val bNum = ohaengToNumber[b] ?: return false
+        return (bNum + 2) % 5 == aNum
+    }
+
+    return when {
+        first == second -> "동일"
+        isSangSaeng(first, second) -> "상생"
+        isNormalGeuk(first, second) -> "정상극(${first}극$second)"
+        isReverseGeuk(first, second) -> "역상극(${second}극$first)"
+        else -> "중립"
+    }
 }
 
-fun buildNameInput(query: NameQuery, timePoint: TimePointResult): NameInput {
-    return NameInput(
-        surname = query.surnameBlocks.joinToString("") { it.korean },
-        surnameHanja = query.surnameBlocks.joinToString("") { it.hanja },
-        givenName = query.nameBlocks.joinToString("") { it.korean },
-        givenNameHanja = query.nameBlocks.joinToString("") { it.hanja },
-        timePointResult = timePoint
-    )
-}
+// Data classes
+
+data class BirthInfo(
+    val year: Int,
+    val month: Int,
+    val day: Int,
+    val hour: Int,
+    val minute: Int
+)
+
+data class ParsedName(
+    val surname: String,
+    val surnameHanja: String,
+    val givenName: String,
+    val givenNameHanja: String
+)
