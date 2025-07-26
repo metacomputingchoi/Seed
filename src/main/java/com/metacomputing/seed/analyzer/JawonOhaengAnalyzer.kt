@@ -1,8 +1,9 @@
-// analyzer/JawonOhaengAnalyzer.kt
+// analyzer/JawonOhaengAnalyzer.kt - NFC normalize 적용
 package com.metacomputing.seed.analyzer
 
 import com.metacomputing.seed.model.*
 import com.metacomputing.seed.database.HanjaDatabase
+import java.text.Normalizer
 
 class JawonOhaengAnalyzer {
     private val hanjaDB = HanjaDatabase()
@@ -19,7 +20,9 @@ class JawonOhaengAnalyzer {
         nameInput.givenName.forEachIndexed { index, char ->
             val hanjaChar = nameInput.givenNameHanja.getOrNull(index)?.toString() ?: ""
             val hanjaInfo = hanjaDB.getHanjaInfo(char.toString(), hanjaChar, false)
-            val sourceElement = hanjaInfo?.sourceElement ?: "土"
+
+            // NFC normalize 적용
+            val sourceElement = normalizeString(hanjaInfo?.sourceElement ?: "土")
 
             val key = convertOhaengKey(sourceElement)
             ohaengCount[key] = ohaengCount[key]!! + 1
@@ -30,8 +33,13 @@ class JawonOhaengAnalyzer {
         )
     }
 
+    private fun normalizeString(input: String): String {
+        return Normalizer.normalize(input, Normalizer.Form.NFC)
+    }
+
     private fun convertOhaengKey(ohaeng: String): String {
-        return when(ohaeng) {
+        val normalized = Normalizer.normalize(ohaeng, Normalizer.Form.NFC)
+        return when(normalized) {
             "木" -> "목(木)"
             "火" -> "화(火)"
             "土" -> "토(土)"

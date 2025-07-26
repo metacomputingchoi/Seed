@@ -8,6 +8,10 @@ import java.text.Normalizer
 class HoeksuOhaengAnalyzer {
     private val hanjaDB = HanjaDatabase()
 
+    private fun normalizeString(input: String): String {
+        return Normalizer.normalize(input, Normalizer.Form.NFC)
+    }
+
     fun analyze(nameInput: NameInput): HoeksuOhaeng {
         val ohaengCount = mutableMapOf(
             "목(木)" to 0,
@@ -46,12 +50,9 @@ class HoeksuOhaengAnalyzer {
         )
     }
 
-    private fun normalizeString(input: String): String {
-        return Normalizer.normalize(input, Normalizer.Form.NFC)
-    }
-
     private fun convertOhaengKey(ohaeng: String): String {
-        return when(ohaeng) {
+        val normalized = Normalizer.normalize(ohaeng, Normalizer.Form.NFC)
+        return when(normalized) {
             "木" -> "목(木)"
             "火" -> "화(火)"
             "土" -> "토(土)"
@@ -62,7 +63,8 @@ class HoeksuOhaengAnalyzer {
     }
 
     private fun convertToKorean(ohaeng: String): String {
-        return when(ohaeng) {
+        val normalized = Normalizer.normalize(ohaeng, Normalizer.Form.NFC)
+        return when(normalized) {
             "木" -> "목"
             "火" -> "화"
             "土" -> "토"

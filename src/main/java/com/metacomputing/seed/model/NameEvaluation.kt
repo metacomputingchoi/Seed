@@ -3,6 +3,7 @@ package com.metacomputing.seed.model
 
 data class NameEvaluation(
     val totalScore: Int,
+    val detailedScores: DetailedScores,
     val sageokSuri: SageokSuri,
     val sageokSuriOhaeng: SageokSuriOhaeng,
     val sageokSuriEumYang: SageokSuriEumYang,
@@ -14,6 +15,26 @@ data class NameEvaluation(
     val baleumEumYang: BaleumEumYang,
     val sajuNameOhaeng: SajuNameOhaeng,
     val jawonOhaeng: JawonOhaeng
+)
+
+data class DetailedScores(
+    val sageokSuriScore: ScoreDetail,
+    val sageokSuriOhaengScore: ScoreDetail,
+    val sageokSuriEumYangScore: ScoreDetail,
+    val sajuEumYangScore: ScoreDetail,
+    val hoeksuOhaengScore: ScoreDetail,
+    val hoeksuEumYangScore: ScoreDetail,
+    val baleumOhaengScore: ScoreDetail,
+    val baleumEumYangScore: ScoreDetail,
+    val sajuNameOhaengScore: ScoreDetail,
+    val jawonOhaengScore: ScoreDetail
+)
+
+data class ScoreDetail(
+    val score: Int,
+    val maxScore: Int,
+    val reason: String,
+    val isPassed: Boolean
 )
 
 data class SageokSuri(

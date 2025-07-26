@@ -54,7 +54,8 @@ class BaleumOhaengAnalyzer {
     }
 
     private fun convertOhaengKey(ohaeng: String): String {
-        return when(ohaeng) {
+        val normalized = Normalizer.normalize(ohaeng, Normalizer.Form.NFC)
+        return when(normalized) {
             "木" -> "목(木)"
             "火" -> "화(火)"
             "土" -> "토(土)"
