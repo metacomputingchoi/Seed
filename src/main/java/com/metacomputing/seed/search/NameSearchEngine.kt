@@ -11,6 +11,8 @@ class NameSearchEngine(
     private val hanjaDB: HanjaDatabase,
     private val statsManager: NameStatisticsManager
 ) {
+    private val validCombinationsByLength = mutableMapOf<Pair<List<Int>, Int>, Set<List<Int>>>()
+
     private val validCombinations: Set<NameCombination> by lazy {
         statsManager.getAllStatistics().flatMap { (givenName, stats) ->
             stats.hanjaCombinations
@@ -29,34 +31,37 @@ class NameSearchEngine(
             }
         }
 
+        val nameLength = query.nameBlocks.size
+
         return surnameCandidates.flatMap { surname ->
             val surnameStrokes = getSurnameStrokes(surname)
-            val validStrokeCombinations = SageokSuriOptimizer.getValidNameStrokeCombinations(
-                surnameStrokes.getOrNull(0) ?: 0,
-                surnameStrokes.getOrNull(1) ?: 0
-            )
+
+            val validStrokeCombinations = getOrComputeValidCombinations(surnameStrokes, nameLength)
 
             validCombinations
                 .filter { matchesNameQuery(it, query.nameBlocks) }
-                .filter { isValidStrokeCombination(it, validStrokeCombinations) }
+                .filter { hasValidStrokes(it, validStrokeCombinations) }
                 .map { SearchResult(surname.korean, surname.hanja, it.korean, it.hanja) }
         }
     }
 
-    private fun getSurnameStrokes(surname: SurnameCandidate): List<Int> {
-        return if (surname.korean.length == 2) {
-            listOf(
-                hanjaDB.getHanjaStrokes(surname.korean[0].toString(), surname.hanja[0].toString(), true),
-                hanjaDB.getHanjaStrokes(surname.korean[1].toString(), surname.hanja[1].toString(), true)
-            )
-        } else {
-            listOf(hanjaDB.getHanjaStrokes(surname.korean, surname.hanja, true))
+    private fun getOrComputeValidCombinations(surnameStrokes: List<Int>, nameLength: Int): Set<List<Int>> {
+        val key = surnameStrokes to nameLength
+        return validCombinationsByLength.getOrPut(key) {
+            SageokSuriOptimizer.getValidNameStrokeCombinations(surnameStrokes, nameLength)
         }
     }
 
-    private fun isValidStrokeCombination(
+    private fun getSurnameStrokes(surname: SurnameCandidate): List<Int> {
+        return hanjaDB.getSurnamePairs(surname.korean, surname.hanja).map { pair ->
+            val parts = pair.split("/")
+            if (parts.size == 2) hanjaDB.getHanjaStrokes(parts[0], parts[1], true) else 0
+        }
+    }
+
+    private fun hasValidStrokes(
         combination: NameCombination,
-        validStrokeCombinations: Set<Pair<Int, Int>>
+        validStrokeCombinations: Set<List<Int>>
     ): Boolean {
         val strokes = combination.korean.indices.map { i ->
             hanjaDB.getHanjaStrokes(
@@ -66,10 +71,7 @@ class NameSearchEngine(
             )
         }
 
-        val stroke1 = strokes.getOrNull(0) ?: 0
-        val stroke2 = strokes.getOrNull(1) ?: 0
-
-        return (stroke1 to stroke2) in validStrokeCombinations
+        return strokes in validStrokeCombinations
     }
 
     private fun matchesNameQuery(combination: NameCombination, blocks: List<NameBlock>): Boolean {
@@ -105,17 +107,17 @@ class NameSearchEngine(
             val (first, second) = blocks
             if (isValidDoubleSurname(first, second)) {
                 listOf(SurnameCandidate("${first.korean}${second.korean}",
-                                       "${first.hanja}${second.hanja}"))
+                    "${first.hanja}${second.hanja}"))
             } else emptyList()
         }
     }
 
     private fun isValidDoubleSurname(first: NameBlock, second: NameBlock) =
         !first.isKoreanEmpty && !first.isHanjaEmpty &&
-        !second.isKoreanEmpty && !second.isHanjaEmpty &&
-        first.korean.length == 1 && first.hanja.length == 1 &&
-        second.korean.length == 1 && second.hanja.length == 1 &&
-        hanjaDB.isSurname("${first.korean}${second.korean}/${first.hanja}${second.hanja}")
+                !second.isKoreanEmpty && !second.isHanjaEmpty &&
+                first.korean.length == 1 && first.hanja.length == 1 &&
+                second.korean.length == 1 && second.hanja.length == 1 &&
+                hanjaDB.isSurname("${first.korean}${second.korean}/${first.hanja}${second.hanja}")
 }
 
 data class NameCombination(val korean: String, val hanja: String)
