@@ -15,11 +15,13 @@ class HanjaDatabase {
         isLenient = true
     }
 
-    private var hanjaDict: Map<String, HanjaInfo> = emptyMap()
+    var hanjaDict: Map<String, HanjaInfo> = emptyMap()
     private var koreanToHanjaMapping: Map<String, List<String>> = emptyMap()
     private var hanjaToKeysMapping: Map<String, List<String>> = emptyMap()
     private var chosungToKoreanMapping: Map<String, List<String>> = emptyMap()
     private var jungsungToKoreanMapping: Map<String, List<String>> = emptyMap()
+
+    private var surnamePairMapping: Map<String, List<String>> = emptyMap()
 
     init {
         loadHanjaData()
@@ -32,8 +34,33 @@ class HanjaDatabase {
             loadHanjaToKeysMapping()
             loadChosungToKoreanMapping()
             loadJungsungToKoreanMapping()
+            loadSurnamePairMapping()
         } catch (e: Exception) {
             println("한자 데이터 로드 실패: ${e.message}")
+        }
+    }
+
+    private fun loadSurnamePairMapping() {
+        val resourcePath = "resources/seed/data/surname_hanja_pair_mapping_dict.json"
+        val file = File(resourcePath)
+
+        surnamePairMapping = if (file.exists()) {
+            val jsonString = file.readText()
+            json.decodeFromString(
+                MapSerializer(String.serializer(), ListSerializer(String.serializer())),
+                jsonString
+            )
+        } else {
+            val resourceStream = this::class.java.classLoader.getResourceAsStream(
+                "seed/data/surname_hanja_pair_mapping_dict.json"
+            )
+            resourceStream?.use { stream ->
+                val jsonString = stream.bufferedReader().use { it.readText() }
+                json.decodeFromString(
+                    MapSerializer(String.serializer(), ListSerializer(String.serializer())),
+                    jsonString
+                )
+            } ?: emptyMap()
         }
     }
 
@@ -155,6 +182,23 @@ class HanjaDatabase {
                 )
             } ?: emptyMap()
         }
+    }
+
+    fun getAllSurnames(): List<String> {
+        return surnamePairMapping.keys.toList()
+    }
+
+    fun getAllNameHanja(): List<String> {
+        return hanjaDict.keys.toList()
+    }
+
+    fun isSurname(key: String): Boolean {
+        return surnamePairMapping.containsKey(key)
+    }
+
+    fun getDoubleSurnameParts(surname: String, surnameHanja: String): List<String>? {
+        val key = "$surname/$surnameHanja"
+        return surnamePairMapping[key]
     }
 
     fun getHanjaListByKorean(korean: String): List<String> {

@@ -13,7 +13,10 @@ data class NameStatistics(
     val yearlyPopularityRank: YearlyData = YearlyData(),
 
     @SerialName("연도별 출생아 수")
-    val yearlyBirthCount: YearlyData = YearlyData()
+    val yearlyBirthCount: YearlyData = YearlyData(),
+
+    @SerialName("hanja_combinations")
+    val hanjaCombinations: List<String> = emptyList()
 )
 
 @Serializable

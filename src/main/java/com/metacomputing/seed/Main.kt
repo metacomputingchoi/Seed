@@ -1,28 +1,36 @@
 // Main.kt
 package com.metacomputing.seed
 
+import com.metacomputing.mcalendar.CalSDK
 import com.metacomputing.seed.analyzer.NameAnalyzer
 import com.metacomputing.seed.model.NameInput
 import com.metacomputing.seed.statistics.NameStatisticsLoader
 import com.metacomputing.seed.statistics.NameStatisticsAnalyzer
 import com.metacomputing.seed.database.HanjaDatabase
+import com.metacomputing.seed.search.NameQueryParser
+import com.metacomputing.seed.search.NameSearchEngine
 
 fun main() {
-    val nameInput = NameInput.create(
+    val timePointResult = CalSDK.getTimePointData(
+        year = 1986,
+        month = 4,
+        day = 19,
+        hour = 5,
+        minute = 45,
+        timezOffset = -540,
+        lang = 0
+    )
+
+    val nameInput = NameInput(
         surname = "최",
         surnameHanja = "崔",
         givenName = "성수",
         givenNameHanja = "成秀",
-        birthYear = 1986,
-        birthMonth = 4,
-        birthDay = 19,
-        birthHour = 5,
-        birthMinute = 45,
-        timezoneOffset = -540
+        timePointResult = timePointResult
     )
 
     println("=== 사주 정보 ===")
-    println("생년월일시: ${nameInput.birthDateTime}")
+    println("생년월일시: ${nameInput.timePointResult.dateTime}")
     println("사주: ${nameInput.timePointResult.sexagenaryInfo.year} ${nameInput.timePointResult.sexagenaryInfo.month} ${nameInput.timePointResult.sexagenaryInfo.day} ${nameInput.timePointResult.sexagenaryInfo.hour}")
     println()
 
@@ -152,4 +160,73 @@ fun main() {
 
     println("발음 음양 배치 (성명 순서): ${evaluation.baleumEumYang.arrangement.joinToString("")}")
     println("발음 음양 - 음: ${evaluation.baleumEumYang.eumCount}, 양: ${evaluation.baleumEumYang.yangCount}")
+
+    testNameSearch()
+}
+
+fun testNameSearch() {
+    val hanjaDB = HanjaDatabase()
+    val statsLoader = NameStatisticsLoader()
+    val searchEngine = NameSearchEngine(hanjaDB, statsLoader)
+    val parser = NameQueryParser(hanjaDB)
+
+    // 전체 유효한 조합 수 출력 (디버깅용)
+    println("=== 통계 정보 ===")
+    val stats = statsLoader.loadStatistics()
+    var totalCombinations = 0
+    var namesWithHanja = 0
+    var namesWithoutHanja = 0
+
+    stats.forEach { (name, stat) ->
+        if (stat.hanjaCombinations.isNotEmpty()) {
+            totalCombinations += stat.hanjaCombinations.size
+            namesWithHanja++
+        } else {
+            namesWithoutHanja++
+        }
+    }
+
+    println("전체 이름 수: ${stats.size}")
+    println("한자 조합이 있는 이름: $namesWithHanja")
+    println("한자 조합이 없는 이름: $namesWithoutHanja")
+    println("전체 유효한 이름 조합 수: $totalCombinations")
+
+    // 테스트 케이스들 - 복성 테스트 추가
+    val testCases = listOf(
+        "[최/崔][_/_][_/_]",
+        "[제갈/諸葛][ㅓ/_][ㅅ/_]",     // 복성을 한 블록으로
+        "[제갈/諸葛][_/秀]",            // 복성을 한 블록으로
+        "[제/諸][갈/葛][ㅓ/_][ㅅ/_]",  // 복성을 두 블록으로 (기존 방식)
+        "[최/崔][_/_]",
+        "[최/崔][성/成]",
+        "[최/崔][_/成][수/_]",
+        "[최/崔][성/成][수/秀]",
+        "[최/崔][ㅅ/_][_/_]",
+        "[최/崔][_/_][ㅜ/_]",
+        "[김/金][성/成][숙/秀]",
+        "[제/諸][갈/_][_/_]",
+        "[제갈/諸葛][성/成][수/秀]"      // 제갈성수 테스트
+    )
+
+    println("\n=== 이름 검색 테스트 ===")
+
+    testCases.forEach { testCase ->
+        println("\n검색 조건: $testCase")
+
+        val query = parser.parse(testCase)
+        println("파싱 결과 - 성씨: ${query.surnameBlocks.size}블록, 이름: ${query.nameBlocks.size}블록")
+
+        val results = searchEngine.search(query)
+
+        println("검색 결과: ${results.size}개")
+
+        // 처음 20개만 출력
+        results.take(20).forEach { result ->
+            println("  ${result.fullName} (${result.fullNameHanja})")
+        }
+
+        if (results.size > 20) {
+            println("  ... 외 ${results.size - 20}개")
+        }
+    }
 }
