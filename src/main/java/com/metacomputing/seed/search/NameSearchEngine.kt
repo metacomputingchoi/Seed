@@ -29,7 +29,6 @@ class NameSearchEngine(
             }
         }
 
-        // 성씨별로 유효한 이름 후보 필터링
         return surnameCandidates.flatMap { surname ->
             val surnameStrokes = getSurnameStrokes(surname)
             val validStrokeCombinations = SageokSuriOptimizer.getValidNameStrokeCombinations(
@@ -37,7 +36,6 @@ class NameSearchEngine(
                 surnameStrokes.getOrNull(1) ?: 0
             )
 
-            // 유효한 획수 조합을 가진 이름만 필터링
             validCombinations
                 .filter { matchesNameQuery(it, query.nameBlocks) }
                 .filter { isValidStrokeCombination(it, validStrokeCombinations) }
