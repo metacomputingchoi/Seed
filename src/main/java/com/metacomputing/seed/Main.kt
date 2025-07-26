@@ -18,21 +18,26 @@ fun main() {
     // 블록 포맷 입력 예시들
     val queries = listOf(
         "[최/崔][성/成][수/秀]",      // 완전한 이름
-        "[최/崔][ㅅ/_][_/_]",         // 부분 검색
-        "[제갈/諸葛][성/成][수/秀]",  // 복성 완전한 이름
-        "[제갈/諸葛][_/_][_/_]"       // 복성 부분 검색
+        "[최/崔][_/_][_/_]"         // 부분 검색
     )
 
     queries.forEach { query ->
         println("\n=== 입력: $query ===")
-        processNameQuery(query, timePoint)
+        val evaluations = processNameQuery(query, timePoint)
+
+        println("평가 완료: ${evaluations.size}개")
+        // 필요시 여기서 evaluations 리스트 활용
+        evaluations.take(5).forEach { (nameInput, evaluation) ->
+            println("${nameInput.surname}${nameInput.givenName} (${nameInput.surnameHanja}${nameInput.givenNameHanja}) - 점수: ${evaluation.totalScore}/100")
+        }
     }
 }
 
-fun processNameQuery(query: String, timePoint: TimePointResult) {
+fun processNameQuery(query: String, timePoint: TimePointResult): List<Pair<NameInput, NameEvaluation>> {
     val hanjaDB = HanjaDatabase()
     val parser = NameQueryParser(hanjaDB)
     val analyzer = NameAnalyzer()
+    val evaluations = mutableListOf<Pair<NameInput, NameEvaluation>>()
 
     val parsedQuery = parser.parse(query)
 
@@ -44,7 +49,7 @@ fun processNameQuery(query: String, timePoint: TimePointResult) {
         // 직접 평가
         val nameInput = buildNameInput(parsedQuery, timePoint)
         val evaluation = analyzer.analyze(nameInput)
-        printEvaluation(nameInput, evaluation)
+        evaluations.add(nameInput to evaluation)
     } else {
         // 가능한 모든 조합 검색 후 평가
         val searchEngine = NameSearchEngine(hanjaDB, NameStatisticsLoader())
@@ -52,8 +57,8 @@ fun processNameQuery(query: String, timePoint: TimePointResult) {
 
         println("검색된 이름: ${results.size}개")
 
-        // 상위 5개만 평가 (전체 평가 시 take 제거)
-        results.take(5).forEach { result ->
+        // 모든 결과 평가
+        results.forEach { result ->
             val nameInput = NameInput(
                 surname = result.surname,
                 surnameHanja = result.surnameHanja,
@@ -63,13 +68,11 @@ fun processNameQuery(query: String, timePoint: TimePointResult) {
             )
 
             val evaluation = analyzer.analyze(nameInput)
-            printEvaluation(nameInput, evaluation)
-        }
-
-        if (results.size > 5) {
-            println("\n... 외 ${results.size - 5}개")
+            evaluations.add(nameInput to evaluation)
         }
     }
+
+    return evaluations
 }
 
 fun buildNameInput(query: NameQuery, timePoint: TimePointResult): NameInput {
@@ -79,12 +82,4 @@ fun buildNameInput(query: NameQuery, timePoint: TimePointResult): NameInput {
     val givenNameHanja = query.nameBlocks.joinToString("") { it.hanja }
 
     return NameInput(surname, surnameHanja, givenName, givenNameHanja, timePoint)
-}
-
-fun printEvaluation(nameInput: NameInput, evaluation: NameEvaluation) {
-    println("\n${nameInput.surname}${nameInput.givenName} (${nameInput.surnameHanja}${nameInput.givenNameHanja}) - 점수: ${evaluation.totalScore}/100")
-    println("  원격: ${evaluation.sageokSuri.wonGyeok}획(${evaluation.sageokSuri.wonGyeokFortune})")
-    println("  형격: ${evaluation.sageokSuri.hyeongGyeok}획(${evaluation.sageokSuri.hyeongGyeokFortune})")
-    println("  이격: ${evaluation.sageokSuri.iGyeok}획(${evaluation.sageokSuri.iGyeokFortune})")
-    println("  정격: ${evaluation.sageokSuri.jeongGyeok}획(${evaluation.sageokSuri.jeongGyeokFortune})")
 }
